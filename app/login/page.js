@@ -190,11 +190,11 @@ export default function Login() {
         {/* Additional Info */}
         <p className="text-center text-sm text-white/80 mt-6">
           By continuing, you agree to PadhaiHub's{" "}
-          <Link href="#" className="underline hover:text-white">
+          <Link href="/terms" className="underline hover:text-white">
             Terms of Service
           </Link>{" "}
           and{" "}
-          <Link href="#" className="underline hover:text-white">
+          <Link href="/privacy" className="underline hover:text-white">
             Privacy Policy
           </Link>
         </p>

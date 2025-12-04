@@ -420,9 +420,9 @@ export default function InstructorApplication() {
                 />
                 <Label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer">
                   I agree to the{" "}
-                  <a href="#" className="text-primary hover:underline">
+                  <Link href="/terms" className="text-primary hover:underline">
                     Terms and Conditions
-                  </a>{" "}
+                  </Link>{" "}
                   and confirm that all information provided is accurate
                 </Label>
               </div>

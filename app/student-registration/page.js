@@ -332,11 +332,11 @@ export default function StudentRegistration() {
                 />
                 <Label htmlFor="terms" className="text-sm cursor-pointer leading-normal">
                   I agree to the{" "}
-                  <Link href="#" className="text-primary hover:underline font-medium">
+                  <Link href="/terms" className="text-primary hover:underline font-medium">
                     Terms and Conditions
                   </Link>{" "}
                   and{" "}
-                  <Link href="#" className="text-primary hover:underline font-medium">
+                  <Link href="/privacy" className="text-primary hover:underline font-medium">
                     Privacy Policy
                   </Link>
                 </Label>
