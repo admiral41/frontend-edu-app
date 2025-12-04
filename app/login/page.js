@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +13,7 @@ import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Login() {
+  const router = useRouter();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -37,7 +39,9 @@ export default function Login() {
     toast.success("Login Successful!", {
       description: "Welcome back to PadhaiHub!"
     });
-    // Handle login logic here
+
+    // Redirect to student dashboard
+    router.push("/student-dashboard");
   };
 
   return (

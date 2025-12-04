@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DatePicker } from "@/components/ui/date-picker";
 import { ArrowLeft } from "lucide-react";
 
 export default function InstructorApplication() {
@@ -177,12 +178,13 @@ export default function InstructorApplication() {
 
                   <div className="space-y-2">
                     <Label htmlFor="dateOfBirth">Date of Birth *</Label>
-                    <Input
-                      id="dateOfBirth"
-                      type="date"
-                      value={formData.dateOfBirth}
-                      onChange={(e) => handleChange("dateOfBirth", e.target.value)}
-                      required
+                    <DatePicker
+                      date={formData.dateOfBirth}
+                      onSelect={(date) => handleChange("dateOfBirth", date)}
+                      placeholder="Pick a date"
+                      disabled={(date) =>
+                        date > new Date() || date < new Date("1900-01-01")
+                      }
                     />
                   </div>
                 </div>

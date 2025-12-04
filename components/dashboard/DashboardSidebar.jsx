@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -15,7 +15,6 @@ import {
   LayoutDashboard,
   BookOpen,
   Video,
-  FileText,
   TrendingUp,
   Settings,
   LogOut,
@@ -23,12 +22,13 @@ import {
   User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAlertDialog } from "@/components/ui/alert-dialog-provider";
+import { toast } from "sonner";
 
 const navItems = [
   { href: "/student-dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/student-dashboard/courses", label: "My Courses", icon: BookOpen },
   { href: "/student-dashboard/live-classes", label: "Live Classes", icon: Video },
-  { href: "/student-dashboard/assignments", label: "Assignments", icon: FileText },
   { href: "/student-dashboard/progress", label: "Progress", icon: TrendingUp },
   { href: "/student-dashboard/profile", label: "Profile", icon: User },
   { href: "/student-dashboard/settings", label: "Settings", icon: Settings },
@@ -56,6 +56,24 @@ function NavLink({ href, label, icon: Icon, onClick }) {
 }
 
 function SidebarContent({ onLinkClick }) {
+  const router = useRouter();
+  const { showAlert } = useAlertDialog();
+
+  const handleLogout = () => {
+    showAlert({
+      title: "Logout",
+      description: "Are you sure you want to logout? You'll need to login again to access your dashboard.",
+      confirmText: "Logout",
+      cancelText: "Cancel",
+      variant: "destructive",
+      onConfirm: () => {
+        // API call to logout
+        toast.success("Logged out successfully!");
+        router.push("/login");
+      },
+    });
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Logo/Brand */}
@@ -75,7 +93,11 @@ function SidebarContent({ onLinkClick }) {
 
       {/* Logout */}
       <div className="p-3 border-t">
-        <Button variant="ghost" className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10">
+        <Button
+          variant="ghost"
+          className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+          onClick={handleLogout}
+        >
           <LogOut className="h-5 w-5 mr-3" />
           Logout
         </Button>

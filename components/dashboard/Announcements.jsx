@@ -1,9 +1,14 @@
+"use client";
+
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Bell, AlertCircle, Info, Megaphone } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Bell, AlertCircle, Info, Megaphone, Check } from "lucide-react";
+import { toast } from "sonner";
 
 export default function Announcements() {
-  const announcements = [
+  const [announcements, setAnnouncements] = useState([
     {
       id: 1,
       type: "urgent",
@@ -40,7 +45,12 @@ export default function Announcements() {
       icon: Info,
       variant: "outline",
     },
-  ];
+  ]);
+
+  const handleMarkAsRead = (id) => {
+    setAnnouncements(announcements.filter((item) => item.id !== id));
+    toast.success("Marked as read");
+  };
 
   return (
     <Card>
@@ -51,41 +61,56 @@ export default function Announcements() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
-          {announcements.map((item) => {
-            const Icon = item.icon;
-            return (
-              <div
-                key={item.id}
-                className="p-3 border rounded-lg hover:shadow-sm transition-shadow"
-              >
-                <div className="flex items-start gap-3">
-                  <div className={`mt-0.5 shrink-0 ${
-                    item.variant === "destructive" ? "text-destructive" :
-                    item.variant === "default" ? "text-primary" :
-                    "text-muted-foreground"
-                  }`}>
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <h4 className="font-semibold text-sm line-clamp-1">
-                        {item.title}
-                      </h4>
-                      <Badge variant={item.variant} className="text-xs shrink-0">
-                        {item.type}
-                      </Badge>
+        {announcements.length === 0 ? (
+          <div className="text-center py-6 text-muted-foreground">
+            <p className="text-sm">No new announcements</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {announcements.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={item.id}
+                  className="p-3 border rounded-lg hover:shadow-sm transition-shadow"
+                >
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className={`mt-0.5 shrink-0 ${
+                      item.variant === "destructive" ? "text-destructive" :
+                      item.variant === "default" ? "text-primary" :
+                      "text-muted-foreground"
+                    }`}>
+                      <Icon className="h-5 w-5" />
                     </div>
-                    <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mb-1">
-                      {item.message}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{item.date}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <h4 className="font-semibold text-sm line-clamp-1">
+                          {item.title}
+                        </h4>
+                        <Badge variant={item.variant} className="text-xs shrink-0">
+                          {item.type}
+                        </Badge>
+                      </div>
+                      <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mb-1">
+                        {item.message}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{item.date}</p>
+                    </div>
                   </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => handleMarkAsRead(item.id)}
+                  >
+                    <Check className="h-4 w-4 mr-2" />
+                    Mark as Read
+                  </Button>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
