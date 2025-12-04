@@ -4,12 +4,12 @@ import { useEffect, useState } from "react";
 import { useIntersectionObserver } from "@/lib/hooks/useIntersectionObserver";
 import { platformStats } from "@/lib/constants/data";
 
-function CountUp({ end, duration = 2000, suffix = "" }) {
+function CountUp({ end, duration = 2000, suffix = "", isVisible }) {
   const [count, setCount] = useState(0);
   const [hasAnimated, setHasAnimated] = useState(false);
 
   useEffect(() => {
-    if (hasAnimated) return;
+    if (!isVisible || hasAnimated) return;
 
     setHasAnimated(true);
     const increment = end / (duration / 16);
@@ -26,7 +26,7 @@ function CountUp({ end, duration = 2000, suffix = "" }) {
     }, 16);
 
     return () => clearInterval(timer);
-  }, [end, duration, hasAnimated]);
+  }, [end, duration, hasAnimated, isVisible]);
 
   return (
     <span>
@@ -37,7 +37,18 @@ function CountUp({ end, duration = 2000, suffix = "" }) {
 }
 
 export default function StatsBar() {
-  const [ref, isVisible] = useIntersectionObserver({ threshold: 0.3 });
+  const [ref, isVisible] = useIntersectionObserver({ threshold: 0.1 });
+  const [shouldAnimate, setShouldAnimate] = useState(false);
+
+  useEffect(() => {
+    // Fallback: trigger animation after component mounts
+    const timer = setTimeout(() => {
+      setShouldAnimate(true);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const isActive = isVisible || shouldAnimate;
 
   return (
     <section
@@ -66,17 +77,15 @@ export default function StatsBar() {
               key={stat.id}
               className="relative overflow-hidden rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 p-6 md:p-8 text-center hover:bg-white/15 hover:border-white/30 hover:scale-105 transition-all duration-300 group"
               style={{
-                opacity: isVisible ? 1 : 0,
-                transform: isVisible ? "translateY(0)" : "translateY(30px)",
+                opacity: isActive ? 1 : 0,
+                transform: isActive ? "translateY(0)" : "translateY(30px)",
                 transition: `all 0.7s ease-out ${index * 150}ms`,
               }}
             >
               <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               <div className="relative">
                 <div className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-3 text-white drop-shadow-lg">
-                  {isVisible && (
-                    <CountUp end={stat.value} suffix={stat.suffix} />
-                  )}
+                  <CountUp end={stat.value} suffix={stat.suffix} isVisible={isActive} />
                 </div>
                 <div className="text-sm md:text-base text-white/90 font-semibold uppercase tracking-wide">
                   {stat.label}

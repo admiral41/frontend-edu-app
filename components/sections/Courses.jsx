@@ -1,28 +1,26 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useRef } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Heart, ChevronLeft, ChevronRight } from "lucide-react";
 import { courses } from "@/lib/constants/data";
-import { useIntersectionObserver } from "@/lib/hooks/useIntersectionObserver";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 function CourseCard({ course, index }) {
   const [isWishlisted, setIsWishlisted] = useState(false);
-  const [ref, isVisible] = useIntersectionObserver();
 
   return (
-    <Card
-      ref={ref}
-      className={cn(
-        "overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col h-full",
-        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-      )}
-      style={{ transitionDelay: `${index * 100}ms` }}
-    >
+    <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col h-full">
       {/* Course Image */}
       <div className="relative h-40 bg-gradient-to-br from-primary/20 to-secondary/20 overflow-hidden">
         <div className="absolute inset-0 flex items-center justify-center">
@@ -38,7 +36,9 @@ function CourseCard({ course, index }) {
           <Heart
             className={cn(
               "h-5 w-5",
-              isWishlisted ? "fill-red-500 text-red-500" : "text-muted-foreground"
+              isWishlisted
+                ? "fill-red-500 text-red-500"
+                : "text-muted-foreground"
             )}
           />
         </button>
@@ -67,7 +67,9 @@ function CourseCard({ course, index }) {
 
       <CardContent className="py-3">
         {/* Level */}
-        <Badge variant="outline" className="text-xs">{course.level}</Badge>
+        <Badge variant="outline" className="text-xs">
+          {course.level}
+        </Badge>
       </CardContent>
 
       <CardFooter className="flex flex-col gap-2.5 pt-3 border-t">
@@ -89,9 +91,11 @@ function CourseCard({ course, index }) {
         <Button
           className="w-full"
           size="sm"
-          onClick={() => toast.info("Coming Soon!", {
-            description: "Enrollments will open soon. Stay tuned!"
-          })}
+          onClick={() =>
+            toast.info("Coming Soon!", {
+              description: "Enrollments will open soon. Stay tuned!",
+            })
+          }
         >
           Enroll Now
         </Button>
@@ -101,75 +105,29 @@ function CourseCard({ course, index }) {
 }
 
 export default function Courses() {
-  const [ref, isVisible] = useIntersectionObserver();
   const scrollRef = useRef(null);
-  const sectionRef = useRef(null);
-  const [isScrollLocked, setIsScrollLocked] = useState(false);
-
-  useEffect(() => {
-    const handleWheel = (e) => {
-      if (!scrollRef.current || !sectionRef.current) return;
-
-      const section = sectionRef.current;
-      const container = scrollRef.current;
-
-      // Check if section is in viewport
-      const rect = section.getBoundingClientRect();
-      const inView = rect.top <= 100 && rect.bottom >= window.innerHeight / 2;
-
-      if (!inView) return;
-
-      const scrollLeft = container.scrollLeft;
-      const maxScroll = container.scrollWidth - container.clientWidth;
-      const isAtStart = scrollLeft <= 0;
-      const isAtEnd = scrollLeft >= maxScroll - 5;
-
-      // Scrolling down
-      if (e.deltaY > 0) {
-        if (!isAtEnd) {
-          e.preventDefault();
-          container.scrollBy({ left: e.deltaY * 2, behavior: 'auto' });
-        }
-      }
-      // Scrolling up
-      else if (e.deltaY < 0) {
-        if (!isAtStart) {
-          e.preventDefault();
-          container.scrollBy({ left: e.deltaY * 2, behavior: 'auto' });
-        }
-      }
-    };
-
-    window.addEventListener('wheel', handleWheel, { passive: false });
-    return () => window.removeEventListener('wheel', handleWheel);
-  }, []);
 
   const scroll = (direction) => {
     if (scrollRef.current) {
       const scrollAmount = 350;
       scrollRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth'
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
       });
     }
   };
 
   return (
-    <section ref={sectionRef} id="courses" className="py-16 md:py-24 bg-secondary/5">
+    <section id="courses" className="py-16 md:py-24 bg-secondary/5">
       <div className="container mx-auto px-4">
         {/* Section Header */}
-        <div
-          ref={ref}
-          className={cn(
-            "text-center max-w-3xl mx-auto mb-12 md:mb-16 transition-all duration-700",
-            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-          )}
-        >
+        <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
             Popular Courses
           </h2>
           <p className="text-lg text-muted-foreground">
-            Choose from our wide range of courses designed for SEE and +2 students
+            Choose from our wide range of courses designed for SEE and +2
+            students
           </p>
         </div>
 
@@ -177,14 +135,14 @@ export default function Courses() {
         <div className="relative">
           {/* Navigation Buttons */}
           <button
-            onClick={() => scroll('left')}
+            onClick={() => scroll("left")}
             className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-background/80 backdrop-blur-sm border hover:bg-accent transition-colors shadow-lg hidden md:flex items-center justify-center"
             aria-label="Previous courses"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
           <button
-            onClick={() => scroll('right')}
+            onClick={() => scroll("right")}
             className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-background/80 backdrop-blur-sm border hover:bg-accent transition-colors shadow-lg hidden md:flex items-center justify-center"
             aria-label="Next courses"
           >
@@ -196,8 +154,8 @@ export default function Courses() {
             ref={scrollRef}
             className="flex gap-5 overflow-x-auto scroll-smooth pb-4 snap-x snap-mandatory scrollbar-hide"
             style={{
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none',
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
             }}
           >
             {courses.map((course, index) => (
@@ -216,9 +174,11 @@ export default function Courses() {
           <Button
             variant="outline"
             size="lg"
-            onClick={() => toast.info("Coming Soon!", {
-              description: "More courses will be available soon!"
-            })}
+            onClick={() =>
+              toast.info("Coming Soon!", {
+                description: "More courses will be available soon!",
+              })
+            }
           >
             View All Courses
           </Button>
