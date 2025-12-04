@@ -155,15 +155,15 @@ export default function HeroSlider() {
           </div>
 
           {/* Floating Cards */}
-          <div className="relative hidden md:block h-[400px]">
+          <div className="relative hidden md:block h-[400px] overflow-hidden">
             {floatingCards.map((card, index) => (
               <div
                 key={index}
                 className={cn(
                   "absolute bg-white/95 backdrop-blur-sm rounded-2xl p-5 shadow-2xl",
-                  index === 0 && "top-8 right-20",
-                  index === 1 && "top-40 right-52",
-                  index === 2 && "top-64 right-16"
+                  index === 0 && "top-8 right-4 lg:right-20",
+                  index === 1 && "top-40 right-0 lg:right-12",
+                  index === 2 && "top-64 right-4 lg:right-16"
                 )}
                 style={{
                   animation: `float 4s ease-in-out infinite`,

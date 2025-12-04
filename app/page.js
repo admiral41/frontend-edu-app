@@ -9,7 +9,7 @@ import InquiryForm from "@/components/sections/InquiryForm";
 
 export default function Home() {
   return (
-    <>
+    <div className="overflow-x-hidden">
       <Navbar />
       <main>
         <HeroSlider />
@@ -20,6 +20,6 @@ export default function Home() {
         <InquiryForm />
       </main>
       <Footer />
-    </>
+    </div>
   );
 }
