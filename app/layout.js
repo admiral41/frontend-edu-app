@@ -1,5 +1,6 @@
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
+import { AlertDialogProvider } from "@/components/ui/alert-dialog-provider";
 
 export const metadata = {
   title: "PadhaiHub - Nepal's #1 Online Learning Platform",
@@ -10,8 +11,10 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className="overflow-x-hidden">
-        {children}
-        <Toaster />
+        <AlertDialogProvider>
+          {children}
+          <Toaster />
+        </AlertDialogProvider>
       </body>
     </html>
   );
