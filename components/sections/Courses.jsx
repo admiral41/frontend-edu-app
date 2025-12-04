@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Heart, Clock, Users, Star } from "lucide-react";
+import { Heart, ChevronLeft, ChevronRight } from "lucide-react";
 import { courses } from "@/lib/constants/data";
 import { useIntersectionObserver } from "@/lib/hooks/useIntersectionObserver";
 import { cn } from "@/lib/utils";
@@ -24,9 +24,9 @@ function CourseCard({ course, index }) {
       style={{ transitionDelay: `${index * 100}ms` }}
     >
       {/* Course Image */}
-      <div className="relative h-48 bg-gradient-to-br from-primary/20 to-secondary/20 overflow-hidden">
+      <div className="relative h-40 bg-gradient-to-br from-primary/20 to-secondary/20 overflow-hidden">
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-6xl">📖</div>
+          <div className="text-5xl">📖</div>
         </div>
 
         {/* Wishlist Button */}
@@ -53,56 +53,32 @@ function CourseCard({ course, index }) {
         )}
       </div>
 
-      <CardHeader className="flex-grow">
-        <Badge variant="secondary" className="w-fit mb-2">
+      <CardHeader className="flex-grow pb-3">
+        <Badge variant="secondary" className="w-fit mb-1 text-xs">
           {course.category}
         </Badge>
-        <CardTitle className="text-lg md:text-xl line-clamp-2">
+        <CardTitle className="text-base md:text-lg line-clamp-2">
           {course.title}
         </CardTitle>
-        <CardDescription className="line-clamp-2">
+        <CardDescription className="line-clamp-2 text-sm">
           {course.description}
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-3">
-        {/* Meta Info */}
-        <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <Clock className="h-4 w-4" />
-            <span>{course.duration}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Users className="h-4 w-4" />
-            <span>{course.students.toLocaleString()} students</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-            <span>{course.rating} ({course.reviews})</span>
-          </div>
-        </div>
-
-        {/* Instructor */}
-        <div className="text-sm">
-          <span className="text-muted-foreground">Instructor: </span>
-          <span className="font-medium">{course.instructor}</span>
-        </div>
-
+      <CardContent className="py-3">
         {/* Level */}
-        <div>
-          <Badge variant="outline">{course.level}</Badge>
-        </div>
+        <Badge variant="outline" className="text-xs">{course.level}</Badge>
       </CardContent>
 
-      <CardFooter className="flex flex-col gap-3 pt-4 border-t">
+      <CardFooter className="flex flex-col gap-2.5 pt-3 border-t">
         {/* Pricing */}
         <div className="flex items-center justify-between w-full">
           <div>
-            <div className="text-2xl font-bold text-primary">
+            <div className="text-xl font-bold text-primary">
               NPR {course.price.toLocaleString()}
             </div>
             {course.originalPrice > course.price && (
-              <div className="text-sm text-muted-foreground line-through">
+              <div className="text-xs text-muted-foreground line-through">
                 NPR {course.originalPrice.toLocaleString()}
               </div>
             )}
@@ -112,7 +88,7 @@ function CourseCard({ course, index }) {
         {/* Enroll Button */}
         <Button
           className="w-full"
-          size="lg"
+          size="sm"
           onClick={() => toast.info("Coming Soon!", {
             description: "Enrollments will open soon. Stay tuned!"
           })}
@@ -126,9 +102,60 @@ function CourseCard({ course, index }) {
 
 export default function Courses() {
   const [ref, isVisible] = useIntersectionObserver();
+  const scrollRef = useRef(null);
+  const sectionRef = useRef(null);
+  const [isScrollLocked, setIsScrollLocked] = useState(false);
+
+  useEffect(() => {
+    const handleWheel = (e) => {
+      if (!scrollRef.current || !sectionRef.current) return;
+
+      const section = sectionRef.current;
+      const container = scrollRef.current;
+
+      // Check if section is in viewport
+      const rect = section.getBoundingClientRect();
+      const inView = rect.top <= 100 && rect.bottom >= window.innerHeight / 2;
+
+      if (!inView) return;
+
+      const scrollLeft = container.scrollLeft;
+      const maxScroll = container.scrollWidth - container.clientWidth;
+      const isAtStart = scrollLeft <= 0;
+      const isAtEnd = scrollLeft >= maxScroll - 5;
+
+      // Scrolling down
+      if (e.deltaY > 0) {
+        if (!isAtEnd) {
+          e.preventDefault();
+          container.scrollBy({ left: e.deltaY * 2, behavior: 'auto' });
+        }
+      }
+      // Scrolling up
+      else if (e.deltaY < 0) {
+        if (!isAtStart) {
+          e.preventDefault();
+          container.scrollBy({ left: e.deltaY * 2, behavior: 'auto' });
+        }
+      }
+    };
+
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    return () => window.removeEventListener('wheel', handleWheel);
+  }, []);
+
+  const scroll = (direction) => {
+    if (scrollRef.current) {
+      const scrollAmount = 350;
+      scrollRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   return (
-    <section id="courses" className="py-16 md:py-24 bg-secondary/5">
+    <section ref={sectionRef} id="courses" className="py-16 md:py-24 bg-secondary/5">
       <div className="container mx-auto px-4">
         {/* Section Header */}
         <div
@@ -146,11 +173,42 @@ export default function Courses() {
           </p>
         </div>
 
-        {/* Course Grid */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-          {courses.map((course, index) => (
-            <CourseCard key={course.id} course={course} index={index} />
-          ))}
+        {/* Course Carousel */}
+        <div className="relative">
+          {/* Navigation Buttons */}
+          <button
+            onClick={() => scroll('left')}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-background/80 backdrop-blur-sm border hover:bg-accent transition-colors shadow-lg hidden md:flex items-center justify-center"
+            aria-label="Previous courses"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            onClick={() => scroll('right')}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-background/80 backdrop-blur-sm border hover:bg-accent transition-colors shadow-lg hidden md:flex items-center justify-center"
+            aria-label="Next courses"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+
+          {/* Scrollable Container */}
+          <div
+            ref={scrollRef}
+            className="flex gap-5 overflow-x-auto scroll-smooth pb-4 snap-x snap-mandatory scrollbar-hide"
+            style={{
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+            }}
+          >
+            {courses.map((course, index) => (
+              <div
+                key={course.id}
+                className="flex-shrink-0 w-[280px] sm:w-[320px] snap-start"
+              >
+                <CourseCard course={course} index={index} />
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* View All Button */}

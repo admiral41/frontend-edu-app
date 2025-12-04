@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Menu, X, GraduationCap } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { navLinks } from "@/lib/constants/data";
 import { cn } from "@/lib/utils";
 
@@ -41,11 +42,14 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
-            <div className={cn(
-              "p-2 rounded-lg group-hover:scale-110 transition-transform",
-              isScrolled ? "bg-primary text-primary-foreground" : "bg-white/20 backdrop-blur-sm text-white"
-            )}>
-              <GraduationCap className="h-6 w-6" />
+            <div className="relative h-10 w-10 md:h-12 md:w-12 group-hover:scale-110 transition-transform">
+              <Image
+                src="/images/padhaihub_logo.png"
+                alt="PadhaiHub Logo"
+                fill
+                className="object-contain"
+                priority
+              />
             </div>
             <span className={cn(
               "text-xl md:text-2xl font-bold transition-colors",
@@ -77,7 +81,7 @@ export default function Navbar() {
 
           {/* Desktop CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Link href="/student-registration">
+            <Link href="/login">
               <Button
                 variant="outline"
                 className={cn(
@@ -85,7 +89,19 @@ export default function Navbar() {
                   !isScrolled && "bg-transparent border-white/40 text-white hover:bg-white/20 hover:border-white/60"
                 )}
               >
-                Student Login
+                Login
+              </Button>
+            </Link>
+            <Link href="/student-registration">
+              <Button
+                className={cn(
+                  "transition-all",
+                  isScrolled
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                    : "bg-primary text-white hover:bg-primary/90"
+                )}
+              >
+                Sign Up
               </Button>
             </Link>
             <Link href="/instructor-application">
@@ -142,7 +158,7 @@ export default function Navbar() {
                 "flex flex-col gap-2 px-4 pt-4 border-t",
                 isScrolled ? "" : "border-white/20"
               )}>
-                <Link href="/student-registration" onClick={() => setIsOpen(false)}>
+                <Link href="/login" onClick={() => setIsOpen(false)}>
                   <Button
                     variant="outline"
                     className={cn(
@@ -150,7 +166,19 @@ export default function Navbar() {
                       !isScrolled && "bg-transparent border-white/40 text-white hover:bg-white/20"
                     )}
                   >
-                    Student Login
+                    Login
+                  </Button>
+                </Link>
+                <Link href="/student-registration" onClick={() => setIsOpen(false)}>
+                  <Button
+                    className={cn(
+                      "w-full",
+                      isScrolled
+                        ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                        : "bg-primary text-white hover:bg-primary/90"
+                    )}
+                  >
+                    Sign Up
                   </Button>
                 </Link>
                 <Link href="/instructor-application" onClick={() => setIsOpen(false)}>

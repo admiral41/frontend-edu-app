@@ -84,6 +84,7 @@ frontend-edu-app/
 │   │   ├── StatsBar.jsx              # Animated statistics section
 │   │   ├── Courses.jsx               # Course cards with toast
 │   │   ├── WhyChooseUs.jsx           # Features section
+│   │   ├── PrivateTutoring.jsx       # 1:1 tutoring service section
 │   │   ├── Testimonials.jsx          # Student testimonials
 │   │   └── InquiryForm.jsx           # Contact/inquiry form
 │   └── ui/                            # shadcn/ui components
@@ -143,9 +144,10 @@ npx shadcn@latest add sonner
 2. **Stats Bar** - Animated counters showing platform statistics
 3. **Courses** - 6 featured courses with pricing and enrollment buttons
 4. **Why Choose Us** - 6 key features of the platform
-5. **Testimonials** - 4 student success stories
-6. **Inquiry Form** - Contact form for inquiries
-7. **Footer** - Contact information and social links
+5. **1:1 Private Tutoring** - Premium one-on-one tutoring service with benefits and pricing
+6. **Testimonials** - 4 student success stories
+7. **Inquiry Form** - Contact form for inquiries
+8. **Footer** - Contact information and social links
 
 ## 🎯 Key Features Implemented
 

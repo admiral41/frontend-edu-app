@@ -4,6 +4,7 @@ import HeroSlider from "@/components/sections/HeroSlider";
 import StatsBar from "@/components/sections/StatsBar";
 import Courses from "@/components/sections/Courses";
 import WhyChooseUs from "@/components/sections/WhyChooseUs";
+import PrivateTutoring from "@/components/sections/PrivateTutoring";
 import Testimonials from "@/components/sections/Testimonials";
 import InquiryForm from "@/components/sections/InquiryForm";
 
@@ -16,6 +17,7 @@ export default function Home() {
         <StatsBar />
         <Courses />
         <WhyChooseUs />
+        <PrivateTutoring />
         <Testimonials />
         <InquiryForm />
       </main>
