@@ -3,9 +3,21 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { GraduationCap, Facebook, Twitter, Instagram, Linkedin, Youtube, Mail, Phone, MapPin, Clock } from "lucide-react";
+import {
+  GraduationCap,
+  Facebook,
+  Twitter,
+  Instagram,
+  Linkedin,
+  Youtube,
+  Mail,
+  Phone,
+  MapPin,
+  Clock,
+} from "lucide-react";
 import { footerLinks, socialLinks, contactInfo } from "@/lib/constants/data";
 import { useState } from "react";
+import { toast } from "sonner";
 
 const socialIconMap = {
   Facebook: Facebook,
@@ -17,11 +29,46 @@ const socialIconMap = {
 
 export default function Footer() {
   const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleNewsletterSubmit = (e) => {
+  const handleNewsletterSubmit = async (e) => {
     e.preventDefault();
-    console.log("Newsletter subscription:", email);
-    setEmail("");
+
+    if (!email) {
+      toast.error("Please enter your email address");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch(
+        `${
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+        }/newsletter/subscribe`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success(data.msg || "Successfully subscribed to newsletter!");
+        setEmail("");
+      } else {
+        toast.error(data.msg || "Failed to subscribe. Please try again.");
+      }
+    } catch (error) {
+      console.error("Newsletter subscription error:", error);
+      toast.error("Something went wrong. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -37,7 +84,8 @@ export default function Footer() {
               <span className="text-2xl font-bold">PadhaiHub</span>
             </Link>
             <p className="text-muted-foreground max-w-sm">
-              Empowering SEE and +2 students across Nepal with quality education and expert guidance to achieve their academic goals.
+              Empowering SEE and +2 students across Nepal with quality education
+              and expert guidance to achieve their academic goals.
             </p>
 
             {/* Social Links */}
@@ -64,7 +112,10 @@ export default function Footer() {
             <ul className="space-y-2">
               {footerLinks.company.map((link) => (
                 <li key={link.label}>
-                  <a href={link.href} className="text-muted-foreground hover:text-primary transition-colors">
+                  <a
+                    href={link.href}
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
                     {link.label}
                   </a>
                 </li>
@@ -78,7 +129,10 @@ export default function Footer() {
             <ul className="space-y-2">
               {footerLinks.support.map((link) => (
                 <li key={link.label}>
-                  <a href={link.href} className="text-muted-foreground hover:text-primary transition-colors">
+                  <a
+                    href={link.href}
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
                     {link.label}
                   </a>
                 </li>
@@ -92,7 +146,10 @@ export default function Footer() {
             <ul className="space-y-2">
               {footerLinks.categories.map((link) => (
                 <li key={link.label}>
-                  <a href={link.href} className="text-muted-foreground hover:text-primary transition-colors">
+                  <a
+                    href={link.href}
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
                     {link.label}
                   </a>
                 </li>
@@ -113,7 +170,10 @@ export default function Footer() {
               </div>
               <div className="flex items-center gap-3 text-muted-foreground">
                 <Mail className="h-5 w-5 text-primary" />
-                <a href={`mailto:${contactInfo.email}`} className="hover:text-primary transition-colors">
+                <a
+                  href={`mailto:${contactInfo.email}`}
+                  className="hover:text-primary transition-colors"
+                >
                   {contactInfo.email}
                 </a>
               </div>
@@ -133,9 +193,12 @@ export default function Footer() {
 
           {/* Newsletter */}
           <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Subscribe to Our Newsletter</h3>
+            <h3 className="font-semibold text-lg">
+              Subscribe to Our Newsletter
+            </h3>
             <p className="text-muted-foreground">
-              Get the latest updates on courses, offers, and educational tips delivered to your inbox
+              Get the latest updates on courses, offers, and educational tips
+              delivered to your inbox
             </p>
             <form onSubmit={handleNewsletterSubmit} className="flex gap-2">
               <Input
@@ -143,9 +206,12 @@ export default function Footer() {
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
                 required
               />
-              <Button type="submit">Subscribe</Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? "Subscribing..." : "Subscribe"}
+              </Button>
             </form>
           </div>
         </div>
