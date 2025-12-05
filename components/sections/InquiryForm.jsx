@@ -19,10 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Check } from "lucide-react";
+import { Check, Loader2, Send } from "lucide-react";
 import { inquiryBenefits } from "@/lib/constants/data";
 import { useIntersectionObserver } from "@/lib/hooks/useIntersectionObserver";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import inquiryService from "@/lib/services/inquiry.service";
 
 export default function InquiryForm() {
   const [ref, isVisible] = useIntersectionObserver();
@@ -33,15 +35,98 @@ export default function InquiryForm() {
     level: "",
     message: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
 
-  const handleSubmit = (e) => {
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.name.trim()) {
+      newErrors.name = "Name is required";
+    } else if (formData.name.trim().length < 2) {
+      newErrors.name = "Name must be at least 2 characters";
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Invalid email address";
+    }
+
+    if (!formData.phone.trim()) {
+      newErrors.phone = "Phone number is required";
+    } else if (!/^[0-9]{10}$/.test(formData.phone.replace(/\s/g, ""))) {
+      newErrors.phone = "Phone number must be 10 digits";
+    }
+
+    if (!formData.level) {
+      newErrors.level = "Please select your current level";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Form submitted:", formData);
-    // Handle form submission
+
+    if (!validateForm()) {
+      toast.error("Please fix the errors in the form");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await inquiryService.submitInquiry({
+        name: formData.name.trim(),
+        email: formData.email.trim().toLowerCase(),
+        phone: formData.phone.trim().replace(/\s/g, ""),
+        level: formData.level,
+        message: formData.message.trim(),
+      });
+
+      toast.success("Enquiry submitted successfully!", {
+        description:
+          "We'll get back to you shortly. Check your email for confirmation.",
+        duration: 5000,
+      });
+
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        level: "",
+        message: "",
+      });
+      setErrors({});
+    } catch (error) {
+      console.error("Enquiry submission error:", error);
+
+      if (error.data?.err && Array.isArray(error.data.err)) {
+        const validationErrors = {};
+        error.data.err.forEach((err) => {
+          validationErrors[err.path] = err.msg;
+        });
+        setErrors(validationErrors);
+        toast.error("Validation failed", {
+          description: "Please check your input and try again",
+        });
+      } else {
+        toast.error("Failed to submit enquiry", {
+          description: error.message || "Please try again later",
+        });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (name, value) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
   };
 
   return (
@@ -118,8 +203,12 @@ export default function InquiryForm() {
                     placeholder="Enter your full name"
                     value={formData.name}
                     onChange={(e) => handleChange("name", e.target.value)}
-                    required
+                    disabled={isSubmitting}
+                    className={errors.name ? "border-destructive" : ""}
                   />
+                  {errors.name && (
+                    <p className="text-sm text-destructive">{errors.name}</p>
+                  )}
                 </div>
 
                 {/* Email */}
@@ -131,8 +220,12 @@ export default function InquiryForm() {
                     placeholder="your.email@example.com"
                     value={formData.email}
                     onChange={(e) => handleChange("email", e.target.value)}
-                    required
+                    disabled={isSubmitting}
+                    className={errors.email ? "border-destructive" : ""}
                   />
+                  {errors.email && (
+                    <p className="text-sm text-destructive">{errors.email}</p>
+                  )}
                 </div>
 
                 {/* Phone */}
@@ -144,8 +237,12 @@ export default function InquiryForm() {
                     placeholder="98XXXXXXXX"
                     value={formData.phone}
                     onChange={(e) => handleChange("phone", e.target.value)}
-                    required
+                    disabled={isSubmitting}
+                    className={errors.phone ? "border-destructive" : ""}
                   />
+                  {errors.phone && (
+                    <p className="text-sm text-destructive">{errors.phone}</p>
+                  )}
                 </div>
 
                 {/* Level */}
@@ -154,8 +251,12 @@ export default function InquiryForm() {
                   <Select
                     value={formData.level}
                     onValueChange={(value) => handleChange("level", value)}
+                    disabled={isSubmitting}
                   >
-                    <SelectTrigger id="level">
+                    <SelectTrigger
+                      id="level"
+                      className={errors.level ? "border-destructive" : ""}
+                    >
                       <SelectValue placeholder="Select your level" />
                     </SelectTrigger>
                     <SelectContent>
@@ -170,6 +271,9 @@ export default function InquiryForm() {
                       <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
+                  {errors.level && (
+                    <p className="text-sm text-destructive">{errors.level}</p>
+                  )}
                 </div>
 
                 {/* Message */}
@@ -181,12 +285,28 @@ export default function InquiryForm() {
                     rows={4}
                     value={formData.message}
                     onChange={(e) => handleChange("message", e.target.value)}
+                    disabled={isSubmitting}
                   />
                 </div>
 
                 {/* Submit Button */}
-                <Button type="submit" className="w-full" size="lg">
-                  Submit Inquiry
+                <Button
+                  type="submit"
+                  className="w-full"
+                  size="lg"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Submit Inquiry
+                    </>
+                  )}
                 </Button>
               </form>
             </CardContent>
