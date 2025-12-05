@@ -2,6 +2,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { AlertDialogProvider } from "@/components/ui/alert-dialog-provider";
 import { ThemeProvider } from "@/components/theme-provider";
+import QueryProvider from "@/lib/providers/QueryProvider";
 
 export const metadata = {
   title: "PadhaiHub - Nepal's #1 Online Learning Platform",
@@ -12,17 +13,19 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="overflow-x-hidden" suppressHydrationWarning>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <AlertDialogProvider>
-            {children}
-            <Toaster />
-          </AlertDialogProvider>
-        </ThemeProvider>
+        <QueryProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <AlertDialogProvider>
+              {children}
+              <Toaster />
+            </AlertDialogProvider>
+          </ThemeProvider>
+        </QueryProvider>
       </body>
     </html>
   );
