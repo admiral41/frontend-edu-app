@@ -3,28 +3,24 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { GraduationCap, Mail, Phone, MapPin, Clock } from "lucide-react";
 import {
-  GraduationCap,
-  Facebook,
-  Twitter,
-  Instagram,
-  Linkedin,
-  Youtube,
-  Mail,
-  Phone,
-  MapPin,
-  Clock,
-} from "lucide-react";
+  FaFacebook,
+  FaTwitter,
+  FaInstagram,
+  FaLinkedin,
+  FaYoutube,
+} from "react-icons/fa";
 import { footerLinks, socialLinks, contactInfo } from "@/lib/constants/data";
 import { useState } from "react";
 import { toast } from "sonner";
 
 const socialIconMap = {
-  Facebook: Facebook,
-  Twitter: Twitter,
-  Instagram: Instagram,
-  Linkedin: Linkedin,
-  Youtube: Youtube,
+  Facebook: FaFacebook,
+  Twitter: FaTwitter,
+  Instagram: FaInstagram,
+  Linkedin: FaLinkedin,
+  Youtube: FaYoutube,
 };
 
 export default function Footer() {
