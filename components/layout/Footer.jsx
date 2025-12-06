@@ -213,8 +213,19 @@ export default function Footer() {
         </div>
 
         {/* Copyright */}
-        <div className="text-center text-muted-foreground mt-8">
+        <div className="text-center text-muted-foreground mt-8 space-y-1">
           <p>© {new Date().getFullYear()} PadhaiHub. All rights reserved.</p>
+          <p className="text-sm">
+            Developed by{" "}
+            <a
+              href="https://greenmantis-porfolio.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline font-medium"
+            >
+              GreenMantis
+            </a>
+          </p>
         </div>
       </div>
     </footer>
