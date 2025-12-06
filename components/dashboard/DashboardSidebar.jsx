@@ -20,6 +20,7 @@ import {
   LogOut,
   Menu,
   User,
+  MessageSquareMore,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAlertDialog } from "@/components/ui/alert-dialog-provider";
@@ -28,9 +29,18 @@ import { toast } from "sonner";
 const navItems = [
   { href: "/student-dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/student-dashboard/courses", label: "My Courses", icon: BookOpen },
-  { href: "/student-dashboard/live-classes", label: "Live Classes", icon: Video },
+  {
+    href: "/student-dashboard/live-classes",
+    label: "Live Classes",
+    icon: Video,
+  },
   { href: "/student-dashboard/progress", label: "Progress", icon: TrendingUp },
   { href: "/student-dashboard/profile", label: "Profile", icon: User },
+  {
+    href: "/student-dashboard/feedback",
+    label: "Feedback",
+    icon: MessageSquareMore,
+  },
   { href: "/student-dashboard/settings", label: "Settings", icon: Settings },
 ];
 
@@ -62,7 +72,8 @@ function SidebarContent({ onLinkClick }) {
   const handleLogout = () => {
     showAlert({
       title: "Logout",
-      description: "Are you sure you want to logout? You'll need to login again to access your dashboard.",
+      description:
+        "Are you sure you want to logout? You'll need to login again to access your dashboard.",
       confirmText: "Logout",
       cancelText: "Cancel",
       variant: "destructive",
@@ -79,9 +90,7 @@ function SidebarContent({ onLinkClick }) {
       {/* Logo/Brand */}
       <div className="px-4 py-5">
         <h2 className="text-xl font-bold text-primary">PadhaiHub</h2>
-        <p className="text-xs text-muted-foreground mt-1">
-          Student Dashboard
-        </p>
+        <p className="text-xs text-muted-foreground mt-1">Student Dashboard</p>
       </div>
 
       {/* Navigation */}
