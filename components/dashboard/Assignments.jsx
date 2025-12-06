@@ -4,79 +4,97 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { FileText, Calendar, AlertCircle, CheckCircle2 } from "lucide-react";
+import AssignmentDetailsDialog from "./AssignmentDetailsDialog";
+import { FileText, Calendar, AlertCircle, Clock, MessageSquare } from "lucide-react";
 
 export default function Assignments() {
   const [selectedAssignment, setSelectedAssignment] = useState(null);
 
+  // Mock assignments matching the course module structure
   const assignments = [
     {
       id: 1,
-      title: "Quadratic Equations Practice",
-      subject: "Mathematics",
-      dueDate: "Dec 8, 2025",
-      daysLeft: 4,
-      status: "pending",
-      description: "Complete exercises 1-15 from Chapter 3. Show all working steps and verify your answers.",
+      courseId: 1,
+      courseName: "Mathematics - Algebra",
+      week: 1,
+      title: "Practice: Variables and Constants",
+      description: `<p>Complete the following exercises to practice identifying and working with variables and constants:</p>
+        <ol>
+          <li>Identify variables and constants in the given expressions</li>
+          <li>Evaluate expressions for given variable values</li>
+          <li>Write expressions for word problems</li>
+        </ol>`,
+      dueDate: "Dec 15, 2025",
       totalMarks: 20,
-      instructions: [
-        "Solve all 15 problems",
-        "Show complete working",
-        "Submit before deadline",
-      ],
+      submitted: true,
+      submittedDate: "Dec 10, 2025",
+      feedback: {
+        reviewed: true,
+        marks: 18,
+        comment: "Excellent work! Your solutions are clear and well-explained.",
+        reviewedBy: "Ram Sharma",
+        reviewedDate: "Dec 12, 2025"
+      }
     },
     {
       id: 2,
-      title: "Newton's Laws Essay",
-      subject: "Physics",
-      dueDate: "Dec 6, 2025",
-      daysLeft: 2,
-      status: "due-soon",
-      description: "Write a 500-word essay explaining Newton's three laws of motion with real-world examples.",
-      totalMarks: 25,
-      instructions: [
-        "Minimum 500 words",
-        "Include 3 examples for each law",
-        "Cite sources properly",
-      ],
+      courseId: 1,
+      courseName: "Mathematics - Algebra",
+      week: 1,
+      title: "Assignment: Basic Operations",
+      description: `<p>Practice basic algebraic operations with the following problems:</p>
+        <ol>
+          <li>Simplify the given expressions</li>
+          <li>Solve basic equations</li>
+          <li>Apply order of operations (BODMAS)</li>
+        </ol>`,
+      dueDate: "Dec 18, 2025",
+      totalMarks: 15,
+      submitted: false,
+      feedback: null
     },
     {
       id: 3,
-      title: "Photosynthesis Lab Report",
-      subject: "Biology",
-      dueDate: "Dec 10, 2025",
-      daysLeft: 6,
-      status: "pending",
-      description: "Submit lab report based on last week's photosynthesis experiment.",
-      totalMarks: 30,
-      instructions: [
-        "Include hypothesis and methodology",
-        "Present data in tables/graphs",
-        "Write conclusion based on results",
-      ],
+      courseId: 1,
+      courseName: "Mathematics - Algebra",
+      week: 2,
+      title: "Solving Linear Equations",
+      description: `<p>Solve the following linear equations and verify your answers:</p>
+        <ol>
+          <li>One-step equations (5 problems)</li>
+          <li>Two-step equations (5 problems)</li>
+          <li>Multi-step equations (5 problems)</li>
+        </ol>`,
+      dueDate: "Dec 22, 2025",
+      totalMarks: 25,
+      submitted: true,
+      submittedDate: "Dec 20, 2025",
+      feedback: {
+        reviewed: false,
+        comment: null
+      }
     },
   ];
 
-  const getStatusBadge = (status, daysLeft) => {
-    if (status === "due-soon") {
+  const getStatusBadge = (assignment) => {
+    if (assignment.submitted) {
+      if (assignment.feedback?.reviewed) {
+        return (
+          <Badge className="flex items-center gap-1 text-xs bg-success text-success-foreground hover:bg-success">
+            Graded: {assignment.feedback.marks}/{assignment.totalMarks}
+          </Badge>
+        );
+      }
       return (
-        <Badge variant="destructive" className="flex items-center gap-1">
-          <AlertCircle className="h-3 w-3" />
-          Due in {daysLeft}d
+        <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+          Pending Review
         </Badge>
       );
     }
     return (
-      <Badge variant="secondary" className="flex items-center gap-1">
-        <Calendar className="h-3 w-3" />
-        {daysLeft} days left
+      <Badge variant="outline" className="flex items-center gap-1 text-xs">
+        <Clock className="h-3 w-3" />
+        Not Submitted
       </Badge>
     );
   };
@@ -98,20 +116,40 @@ export default function Assignments() {
             >
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-sm line-clamp-1">
+                  <h4 className="font-semibold text-sm sm:text-base line-clamp-1">
                     {assignment.title}
                   </h4>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {assignment.subject} • {assignment.totalMarks} marks
+                    {assignment.courseName} • Week {assignment.week}
                   </p>
                 </div>
-                {getStatusBadge(assignment.status, assignment.daysLeft)}
+                {getStatusBadge(assignment)}
               </div>
 
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2.5">
-                <Calendar className="h-3.5 w-3.5" />
-                <span>{assignment.dueDate}</span>
+              <div className="flex items-center justify-between text-xs mb-2.5">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Calendar className="h-3.5 w-3.5" />
+                  <span>Due: {assignment.dueDate}</span>
+                </div>
+                <span className="text-muted-foreground">{assignment.totalMarks} marks</span>
               </div>
+
+              {assignment.submitted && assignment.feedback?.reviewed && (
+                <div className="mb-2.5 p-2 bg-muted/30 rounded text-xs">
+                  <p className="flex items-center gap-1 text-muted-foreground mb-1">
+                    <MessageSquare className="h-3 w-3" />
+                    <span className="font-medium">Teacher Feedback</span>
+                  </p>
+                  <p className="text-foreground line-clamp-2">{assignment.feedback.comment}</p>
+                </div>
+              )}
+
+              {assignment.submitted && !assignment.feedback?.reviewed && (
+                <div className="mb-2.5 p-2 bg-info/10 rounded text-xs flex items-center gap-1.5">
+                  <AlertCircle className="h-3.5 w-3.5 text-info shrink-0" />
+                  <span className="text-foreground">Awaiting teacher review</span>
+                </div>
+              )}
 
               <Button
                 size="sm"
@@ -127,72 +165,12 @@ export default function Assignments() {
       </CardContent>
 
       {/* Assignment Details Dialog */}
-      <Dialog
+      <AssignmentDetailsDialog
+        assignment={selectedAssignment}
         open={!!selectedAssignment}
-        onOpenChange={() => setSelectedAssignment(null)}
-      >
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" />
-              {selectedAssignment?.title}
-            </DialogTitle>
-            <DialogDescription>
-              {selectedAssignment?.subject} • {selectedAssignment?.totalMarks}{" "}
-              marks
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            {/* Due Date Info */}
-            <div className="p-3 bg-muted/50 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>Due: {selectedAssignment?.dueDate}</span>
-                </div>
-                {selectedAssignment &&
-                  getStatusBadge(
-                    selectedAssignment.status,
-                    selectedAssignment.daysLeft
-                  )}
-              </div>
-            </div>
-
-            {/* Description */}
-            <div>
-              <h4 className="font-semibold text-sm mb-2">Description</h4>
-              <p className="text-sm text-muted-foreground">
-                {selectedAssignment?.description}
-              </p>
-            </div>
-
-            {/* Instructions */}
-            <div>
-              <h4 className="font-semibold text-sm mb-2">Instructions</h4>
-              <ul className="space-y-1.5">
-                {selectedAssignment?.instructions.map((instruction, index) => (
-                  <li
-                    key={index}
-                    className="flex items-start gap-2 text-sm text-muted-foreground"
-                  >
-                    <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                    <span>{instruction}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-2 pt-2">
-              <Button className="flex-1">Start Assignment</Button>
-              <Button variant="outline" className="flex-1">
-                Download Resources
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+        onOpenChange={(open) => !open && setSelectedAssignment(null)}
+        dashboardMode={true}
+      />
     </Card>
   );
 }

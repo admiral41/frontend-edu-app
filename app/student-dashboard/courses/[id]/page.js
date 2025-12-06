@@ -1,7 +1,10 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import AssignmentDetailsDialog from "@/components/dashboard/AssignmentDetailsDialog";
+import { getProgressColor } from "@/lib/utils/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,11 +28,16 @@ import {
   ExternalLink,
   MessageSquare,
   Star,
+  Clock,
+  Upload,
+  AlertCircle,
 } from "lucide-react";
 
 export default function CoursePage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const courseId = params.id;
+  const tabParam = searchParams.get('tab');
 
   // Mock data - would come from API
   const course = {
@@ -168,6 +176,134 @@ export default function CoursePage() {
     },
   ];
 
+  const assignments = [
+    {
+      week: 1,
+      title: "Introduction to Algebra Assignments",
+      items: [
+        {
+          id: 1,
+          title: "Practice: Variables and Constants",
+          description: `<p>Complete the following exercises to practice identifying and working with variables and constants:</p>
+            <ol>
+              <li>Identify variables and constants in the given expressions</li>
+              <li>Evaluate expressions for given variable values</li>
+              <li>Write expressions for word problems</li>
+            </ol>
+            <p><strong>Instructions:</strong></p>
+            <ul>
+              <li>Show all your working</li>
+              <li>Write clear explanations for each step</li>
+              <li>Submit as PDF or images</li>
+            </ul>`,
+          dueDate: "Dec 15, 2025",
+          totalMarks: 20,
+          submitted: true,
+          submittedDate: "Dec 10, 2025",
+          feedback: {
+            reviewed: true,
+            marks: 18,
+            comment: "Excellent work! Your solutions are clear and well-explained. Minor calculation error in question 3.",
+            reviewedBy: "Ram Sharma",
+            reviewedDate: "Dec 12, 2025"
+          }
+        },
+        {
+          id: 2,
+          title: "Assignment: Basic Operations",
+          description: `<p>Practice basic algebraic operations with the following problems:</p>
+            <ol>
+              <li>Simplify the given expressions</li>
+              <li>Solve basic equations</li>
+              <li>Apply order of operations (BODMAS)</li>
+            </ol>
+            <p><strong>Note:</strong> This assignment covers fundamental concepts that will be used throughout the course.</p>`,
+          dueDate: "Dec 18, 2025",
+          totalMarks: 15,
+          submitted: false,
+          feedback: null
+        }
+      ]
+    },
+    {
+      week: 2,
+      title: "Linear Equations Assignments",
+      items: [
+        {
+          id: 3,
+          title: "Solving Linear Equations",
+          description: `<p>Solve the following linear equations and verify your answers:</p>
+            <ol>
+              <li>One-step equations (5 problems)</li>
+              <li>Two-step equations (5 problems)</li>
+              <li>Multi-step equations (5 problems)</li>
+            </ol>
+            <p><strong>Submission Requirements:</strong></p>
+            <ul>
+              <li>Show complete working for each problem</li>
+              <li>Verify your answers by substitution</li>
+              <li>Explain your approach for at least 3 problems</li>
+            </ul>`,
+          dueDate: "Dec 22, 2025",
+          totalMarks: 25,
+          submitted: true,
+          submittedDate: "Dec 20, 2025",
+          feedback: {
+            reviewed: false,
+            comment: null
+          }
+        },
+        {
+          id: 4,
+          title: "Word Problems Practice",
+          description: `<p>Solve real-world problems using linear equations:</p>
+            <ol>
+              <li>Age-related problems</li>
+              <li>Distance and speed problems</li>
+              <li>Money and percentage problems</li>
+              <li>Mixture problems</li>
+            </ol>
+            <p>For each problem, write the equation and show all steps clearly.</p>`,
+          dueDate: "Dec 25, 2025",
+          totalMarks: 20,
+          submitted: false,
+          feedback: null
+        }
+      ]
+    },
+    {
+      week: 3,
+      title: "Quadratic Equations Assignments",
+      items: [
+        {
+          id: 5,
+          title: "Factoring Practice",
+          description: `<p>Practice factoring quadratic expressions and solving quadratic equations:</p>
+            <ol>
+              <li>Factor simple quadratic expressions</li>
+              <li>Solve equations by factoring</li>
+              <li>Identify special products (difference of squares, perfect squares)</li>
+            </ol>`,
+          dueDate: "Dec 30, 2025",
+          totalMarks: 30,
+          submitted: false,
+          locked: true,
+          feedback: null
+        }
+      ]
+    }
+  ];
+
+  const [selectedAssignment, setSelectedAssignment] = useState(null);
+  const [activeTab, setActiveTab] = useState("modules");
+
+  // Handle tab from URL parameter
+  useEffect(() => {
+    if (tabParam) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
+
   return (
     <DashboardLayout>
       <div className="px-4 py-6 sm:py-8">
@@ -202,7 +338,7 @@ export default function CoursePage() {
             </div>
             <div className="h-3 bg-muted rounded-full overflow-hidden">
               <div
-                className="h-full bg-primary transition-all"
+                className={`h-full ${getProgressColor(course.progress)} transition-all duration-300`}
                 style={{ width: `${course.progress}%` }}
               />
             </div>
@@ -210,7 +346,7 @@ export default function CoursePage() {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="modules" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
             <TabsTrigger value="modules">Modules</TabsTrigger>
             <TabsTrigger value="resources">Resources</TabsTrigger>
@@ -262,9 +398,8 @@ export default function CoursePage() {
                                 size="sm"
                                 variant={lesson.completed ? "ghost" : "default"}
                                 disabled={lesson.locked}
-                                className={`shrink-0 ml-2 h-8 text-xs ${
-                                  lesson.completed ? "text-success hover:text-success hover:bg-success/10" : ""
-                                }`}
+                                className={`shrink-0 ml-2 h-8 text-xs ${lesson.completed ? "text-success hover:text-success hover:bg-success/10" : ""
+                                  }`}
                                 onClick={() => {
                                   if (!lesson.locked) {
                                     window.location.href = `/student-dashboard/courses/${courseId}/lessons/${lesson.id}`;
@@ -333,12 +468,122 @@ export default function CoursePage() {
             </Card>
           </TabsContent>
 
-          {/* Other Tabs - Placeholder */}
+          {/* Assignments Tab */}
           <TabsContent value="assignments" className="mt-6">
             <Card>
-              <CardContent className="p-8 text-center">
-                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">No assignments yet</p>
+              <CardContent className="p-4 sm:p-6">
+                <h3 className="font-semibold text-lg mb-3">Course Assignments</h3>
+                <Accordion type="single" collapsible className="w-full">
+                  {assignments.map((weekGroup, index) => (
+                    <AccordionItem key={weekGroup.week} value={`week-${index + 1}`}>
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex items-center gap-3 text-left">
+                          <span className="font-semibold">
+                            Week {weekGroup.week}: {weekGroup.title}
+                          </span>
+                          <Badge variant="secondary" className="text-xs">
+                            {weekGroup.items.filter(a => a.submitted).length}/{weekGroup.items.length} Submitted
+                          </Badge>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-3 pt-1">
+                          {weekGroup.items.map((assignment) => (
+                            <div
+                              key={assignment.id}
+                              className="p-4 border rounded-lg hover:bg-accent/30 transition-colors"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                    <h4 className="font-semibold text-sm sm:text-base">
+                                      {assignment.title}
+                                    </h4>
+                                    {assignment.submitted && (
+                                      <Badge
+                                        variant={assignment.feedback?.reviewed ? "default" : "secondary"}
+                                        className={`text-xs ${assignment.feedback?.reviewed
+                                          ? "bg-success text-success-foreground hover:bg-success"
+                                          : ""
+                                          }`}
+                                      >
+                                        {assignment.feedback?.reviewed
+                                          ? `Graded: ${assignment.feedback.marks}/${assignment.totalMarks}`
+                                          : "Pending Review"}
+                                      </Badge>
+                                    )}
+                                    {assignment.locked && (
+                                      <Badge variant="outline" className="text-xs">
+                                        <Lock className="h-3 w-3 mr-1" />
+                                        Locked
+                                      </Badge>
+                                    )}
+                                  </div>
+
+                                  <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
+                                    <span className="flex items-center gap-1">
+                                      <Clock className="h-3.5 w-3.5" />
+                                      Due: {assignment.dueDate}
+                                    </span>
+                                    <span>Marks: {assignment.totalMarks}</span>
+                                    {assignment.submitted && (
+                                      <span className="text-success">
+                                        ✓ Submitted on {assignment.submittedDate}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {assignment.submitted && assignment.feedback?.reviewed && (
+                                    <div className="mt-2 p-3 bg-muted/50 rounded border-l-4 border-success">
+                                      <p className="text-xs font-semibold mb-1 flex items-center gap-1.5">
+                                        <MessageSquare className="h-3.5 w-3.5" />
+                                        Teacher Feedback
+                                      </p>
+                                      <p className="text-sm text-foreground">{assignment.feedback.comment}</p>
+                                      <p className="text-xs text-muted-foreground mt-1">
+                                        - {assignment.feedback.reviewedBy} • {assignment.feedback.reviewedDate}
+                                      </p>
+                                    </div>
+                                  )}
+
+                                  {assignment.submitted && !assignment.feedback?.reviewed && (
+                                    <div className="mt-2 p-3 bg-muted/30 rounded border-l-4 border-primary">
+                                      <p className="text-xs flex items-center gap-1.5 text-muted-foreground">
+                                        <AlertCircle className="h-3.5 w-3.5" />
+                                        Not reviewed yet. Your teacher will provide feedback soon.
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <Button
+                                  size="sm"
+                                  variant={assignment.submitted ? "outline" : "default"}
+                                  disabled={assignment.locked}
+                                  className="shrink-0"
+                                  onClick={() => setSelectedAssignment(assignment)}
+                                >
+                                  {assignment.locked
+                                    ? "Locked"
+                                    : assignment.submitted
+                                      ? "View Details"
+                                      : "Start Assignment"}
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+
+                {assignments.length === 0 && (
+                  <div className="py-8 text-center">
+                    <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground">No assignments yet</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -367,11 +612,10 @@ export default function CoursePage() {
                                       ? "default"
                                       : "destructive"
                                   }
-                                  className={`text-xs ${
-                                    quiz.score >= quiz.passingMarks
-                                      ? "bg-success text-success-foreground hover:bg-success"
-                                      : ""
-                                  }`}
+                                  className={`text-xs ${quiz.score >= quiz.passingMarks
+                                    ? "bg-success text-success-foreground hover:bg-success"
+                                    : ""
+                                    }`}
                                 >
                                   {quiz.score >= quiz.passingMarks
                                     ? "Passed"
@@ -484,6 +728,13 @@ export default function CoursePage() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Assignment Details Dialog */}
+        <AssignmentDetailsDialog
+          assignment={selectedAssignment}
+          open={!!selectedAssignment}
+          onOpenChange={(open) => !open && setSelectedAssignment(null)}
+        />
       </div>
     </DashboardLayout>
   );

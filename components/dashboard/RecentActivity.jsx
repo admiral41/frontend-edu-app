@@ -55,7 +55,7 @@ export default function RecentActivity() {
                   <Icon className="h-5 w-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium line-clamp-2">
+                  <p className="text-sm sm:text-base font-medium line-clamp-2">
                     {activity.title}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">

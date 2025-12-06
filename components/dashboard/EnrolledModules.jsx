@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, PlayCircle } from "lucide-react";
+import { getProgressColor } from "@/lib/utils/progress";
 
 export default function EnrolledModules() {
   const modules = [
@@ -68,7 +69,7 @@ export default function EnrolledModules() {
               </div>
               <div className="h-2 bg-muted rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-primary transition-all"
+                  className={`h-full ${getProgressColor(module.progress)} transition-all duration-300`}
                   style={{ width: `${module.progress}%` }}
                 />
               </div>

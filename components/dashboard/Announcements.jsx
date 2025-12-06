@@ -84,7 +84,7 @@ export default function Announcements() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2 mb-1">
-                        <h4 className="font-semibold text-sm line-clamp-1">
+                        <h4 className="font-semibold text-sm sm:text-base line-clamp-1">
                           {item.title}
                         </h4>
                         <Badge variant={item.variant} className="text-xs shrink-0">

@@ -141,7 +141,7 @@ export default function MyCoursesPage() {
                             {course.progress}%
                           </span>
                         </div>
-                        <Progress value={course.progress} className="h-2" />
+                        <Progress value={course.progress} className="h-2" colorByProgress />
                       </div>
 
                       {/* Action */}
