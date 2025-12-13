@@ -18,8 +18,9 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
 
     if (phoneNumber.length !== 10) {
@@ -36,12 +37,54 @@ export default function Login() {
       return;
     }
 
-    toast.success("Login Successful!", {
-      description: "Welcome back to PadhaiHub!"
-    });
+    setIsLoading(true);
 
-    // Redirect to student dashboard
-    router.push("/student-dashboard");
+    try {
+      // Demo mode: Check for demo credentials
+      // In production, this would call the actual auth API via useLogin hook
+      if (phoneNumber === "9800000001" && password === "instructor123") {
+        // Demo instructor login
+        localStorage.setItem("user", JSON.stringify({ role: "instructor", name: "Demo Instructor" }));
+        localStorage.setItem("access_token", "demo_instructor_token");
+        toast.success("Login Successful!", {
+          description: "Welcome back, Instructor!"
+        });
+        router.push("/instructor-dashboard");
+      } else if (phoneNumber === "9800000000" && password === "student123") {
+        // Demo student login
+        localStorage.setItem("user", JSON.stringify({ role: "student", name: "Demo Student" }));
+        localStorage.setItem("access_token", "demo_student_token");
+        toast.success("Login Successful!", {
+          description: "Welcome back to PadhaiHub!"
+        });
+        router.push("/student-dashboard");
+      } else {
+        // Default: redirect to student dashboard for any other login (demo mode)
+        localStorage.setItem("user", JSON.stringify({ role: "student", name: "Student" }));
+        localStorage.setItem("access_token", "demo_token");
+        toast.success("Login Successful!", {
+          description: "Welcome back to PadhaiHub!"
+        });
+        router.push("/student-dashboard");
+      }
+    } catch (error) {
+      toast.error("Login Failed", {
+        description: "Please check your credentials and try again."
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Quick demo login helpers
+  const handleDemoStudentLogin = () => {
+    setPhoneNumber("9800000000");
+    setPassword("student123");
+  };
+
+  const handleDemoInstructorLogin = () => {
+    setPhoneNumber("9800000001");
+    setPassword("instructor123");
   };
 
   return (
@@ -176,12 +219,43 @@ export default function Login() {
               </div>
 
               {/* Login Button */}
-              <Button type="submit" className="w-full" size="lg">
-                Login
+              <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+                {isLoading ? "Logging in..." : "Login"}
               </Button>
 
+              {/* Demo Login Buttons */}
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    Demo Access
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDemoStudentLogin}
+                >
+                  Student Demo
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDemoInstructorLogin}
+                >
+                  Instructor Demo
+                </Button>
+              </div>
+
               {/* Sign Up Link */}
-              <div className="text-center text-sm">
+              <div className="text-center text-sm mt-4">
                 <span className="text-muted-foreground">Don't have an account? </span>
                 <Link href="/student-registration" className="text-primary hover:underline font-medium">
                   Sign up
