@@ -42,7 +42,15 @@ export default function Login() {
     try {
       // Demo mode: Check for demo credentials
       // In production, this would call the actual auth API via useLogin hook
-      if (phoneNumber === "9800000001" && password === "instructor123") {
+      if (phoneNumber === "9800000002" && password === "admin123") {
+        // Demo admin login
+        localStorage.setItem("user", JSON.stringify({ role: "admin", name: "Admin User" }));
+        localStorage.setItem("access_token", "demo_admin_token");
+        toast.success("Login Successful!", {
+          description: "Welcome back, Admin!"
+        });
+        router.push("/admin-dashboard");
+      } else if (phoneNumber === "9800000001" && password === "instructor123") {
         // Demo instructor login
         localStorage.setItem("user", JSON.stringify({ role: "instructor", name: "Demo Instructor" }));
         localStorage.setItem("access_token", "demo_instructor_token");
@@ -85,6 +93,11 @@ export default function Login() {
   const handleDemoInstructorLogin = () => {
     setPhoneNumber("9800000001");
     setPassword("instructor123");
+  };
+
+  const handleDemoAdminLogin = () => {
+    setPhoneNumber("9800000002");
+    setPassword("admin123");
   };
 
   return (
@@ -235,14 +248,14 @@ export default function Login() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-2">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={handleDemoStudentLogin}
                 >
-                  Student Demo
+                  Student
                 </Button>
                 <Button
                   type="button"
@@ -250,7 +263,16 @@ export default function Login() {
                   size="sm"
                   onClick={handleDemoInstructorLogin}
                 >
-                  Instructor Demo
+                  Instructor
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDemoAdminLogin}
+                  className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                >
+                  Admin
                 </Button>
               </div>
 
