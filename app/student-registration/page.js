@@ -10,16 +10,19 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/ui/date-picker";
-import { ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useRegisterLearner } from "@/lib/hooks/useAuth";
 
 export default function StudentRegistration() {
+  const registerMutation = useRegisterLearner();
+
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     phone: "",
     address: "",
-    dateOfBirth: "",
+    dateOfBirth: null,
     gender: "",
     level: "",
     stream: "",
@@ -31,33 +34,166 @@ export default function StudentRegistration() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const handleChange = (name, value) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
+    // Clear error when user makes changes
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
   };
 
-  const handleSubmit = (e) => {
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Full name validation
+    if (!formData.fullName.trim()) {
+      newErrors.fullName = "Full name is required";
+    } else if (formData.fullName.trim().length < 2) {
+      newErrors.fullName = "Name must be at least 2 characters";
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!emailRegex.test(formData.email)) {
+      newErrors.email = "Please enter a valid email address";
+    }
+
+    // Phone validation
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!formData.phone.trim()) {
+      newErrors.phone = "Phone number is required";
+    } else if (!phoneRegex.test(formData.phone.replace(/\s/g, ""))) {
+      newErrors.phone = "Phone number must be 10 digits";
+    }
+
+    // Date of birth validation
+    if (!formData.dateOfBirth) {
+      newErrors.dateOfBirth = "Date of birth is required";
+    }
+
+    // Gender validation
+    if (!formData.gender) {
+      newErrors.gender = "Please select your gender";
+    }
+
+    // Level validation
+    if (!formData.level) {
+      newErrors.level = "Please select your current level";
+    }
+
+    // Stream validation (only for +2)
+    if (formData.level === "plus2" && !formData.stream) {
+      newErrors.stream = "Please select your stream";
+    }
+
+    // School validation
+    if (!formData.school.trim()) {
+      newErrors.school = "School/College name is required";
+    }
+
+    // Password validation
+    if (!formData.password) {
+      newErrors.password = "Password is required";
+    } else if (formData.password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters";
+    }
+
+    // Confirm password validation
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = "Please confirm your password";
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match";
+    }
+
+    // Terms agreement
+    if (!formData.agreeTerms) {
+      newErrors.agreeTerms = "You must agree to the terms and conditions";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Check if all mandatory fields are filled (for disabling submit button)
+  const isFormComplete = () => {
+    if (!formData.fullName.trim()) return false;
+    if (!formData.email.trim()) return false;
+    if (!formData.phone.trim()) return false;
+    if (!formData.dateOfBirth) return false;
+    if (!formData.gender) return false;
+    if (!formData.level) return false;
+    if (formData.level === "plus2" && !formData.stream) return false;
+    if (!formData.school.trim()) return false;
+    if (!formData.password || formData.password.length < 6) return false;
+    if (!formData.confirmPassword || formData.password !== formData.confirmPassword) return false;
+    if (!formData.agreeTerms) return false;
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (formData.password !== formData.confirmPassword) {
-      toast.error("Passwords don't match", {
-        description: "Please make sure both passwords are the same"
+    if (!validateForm()) {
+      toast.error("Please fix the errors", {
+        description: "Some required fields are missing or invalid",
       });
       return;
     }
 
-    if (formData.password.length < 6) {
-      toast.error("Password too short", {
-        description: "Password must be at least 6 characters"
-      });
-      return;
-    }
+    // Split full name into first and last name
+    const nameParts = formData.fullName.trim().split(" ");
+    const firstname = nameParts[0];
+    const lastname = nameParts.slice(1).join(" ") || "";
 
-    toast.success("Registration Successful!", {
-      description: "Welcome to PadhaiHub!"
+    // Map gender to backend expected format (capitalize first letter)
+    const genderMap = {
+      male: "Male",
+      female: "Female",
+      other: "Other",
+    };
+
+    // Prepare data for backend
+    const registrationData = {
+      email: formData.email.trim().toLowerCase(),
+      password: formData.password,
+      firstname,
+      lastname,
+      phone: formData.phone.replace(/\s/g, ""),
+      dob: formData.dateOfBirth ? formData.dateOfBirth.toISOString() : null,
+      gender: genderMap[formData.gender] || formData.gender,
+      address: formData.address.trim(),
+      currentLevel: formData.level === "see" ? "SEE" : "+2",
+      stream: formData.stream || "",
+      schoolCollege: formData.school.trim(),
+      termsAccepted: formData.agreeTerms,
+      privacyPolicyAccepted: formData.agreeTerms,
+    };
+
+    registerMutation.mutate(registrationData, {
+      onError: (error) => {
+        // Handle server validation errors
+        if (error.data?.err && Array.isArray(error.data.err)) {
+          const serverErrors = {};
+          error.data.err.forEach((err) => {
+            // Map backend field names to frontend field names
+            const fieldMap = {
+              firstname: "fullName",
+              lastname: "fullName",
+              currentLevel: "level",
+              schoolCollege: "school",
+              dob: "dateOfBirth",
+            };
+            const field = fieldMap[err.path] || err.path;
+            serverErrors[field] = err.msg;
+          });
+          setErrors(serverErrors);
+        }
+      },
     });
-    console.log("Student Registration:", formData);
-    // Handle form submission
   };
 
   return (
@@ -136,8 +272,11 @@ export default function StudentRegistration() {
                       placeholder="Enter your full name"
                       value={formData.fullName}
                       onChange={(e) => handleChange("fullName", e.target.value)}
-                      required
+                      className={errors.fullName ? "border-red-500" : ""}
                     />
+                    {errors.fullName && (
+                      <p className="text-sm text-red-500">{errors.fullName}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -148,8 +287,11 @@ export default function StudentRegistration() {
                       placeholder="your.email@example.com"
                       value={formData.email}
                       onChange={(e) => handleChange("email", e.target.value)}
-                      required
+                      className={errors.email ? "border-red-500" : ""}
                     />
+                    {errors.email && (
+                      <p className="text-sm text-red-500">{errors.email}</p>
+                    )}
                   </div>
                 </div>
 
@@ -161,9 +303,14 @@ export default function StudentRegistration() {
                       type="tel"
                       placeholder="98XXXXXXXX"
                       value={formData.phone}
-                      onChange={(e) => handleChange("phone", e.target.value)}
-                      required
+                      onChange={(e) =>
+                        handleChange("phone", e.target.value.replace(/\D/g, "").slice(0, 10))
+                      }
+                      className={errors.phone ? "border-red-500" : ""}
                     />
+                    {errors.phone && (
+                      <p className="text-sm text-red-500">{errors.phone}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -175,7 +322,11 @@ export default function StudentRegistration() {
                       disabled={(date) =>
                         date > new Date() || date < new Date("1900-01-01")
                       }
+                      className={errors.dateOfBirth ? "border-red-500" : ""}
                     />
+                    {errors.dateOfBirth && (
+                      <p className="text-sm text-red-500">{errors.dateOfBirth}</p>
+                    )}
                   </div>
                 </div>
 
@@ -186,7 +337,7 @@ export default function StudentRegistration() {
                       value={formData.gender}
                       onValueChange={(value) => handleChange("gender", value)}
                     >
-                      <SelectTrigger id="gender">
+                      <SelectTrigger id="gender" className={errors.gender ? "border-red-500" : ""}>
                         <SelectValue placeholder="Select gender" />
                       </SelectTrigger>
                       <SelectContent>
@@ -195,16 +346,18 @@ export default function StudentRegistration() {
                         <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
+                    {errors.gender && (
+                      <p className="text-sm text-red-500">{errors.gender}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="address">Address *</Label>
+                    <Label htmlFor="address">Address</Label>
                     <Input
                       id="address"
                       placeholder="City, District"
                       value={formData.address}
                       onChange={(e) => handleChange("address", e.target.value)}
-                      required
                     />
                   </div>
                 </div>
@@ -219,9 +372,15 @@ export default function StudentRegistration() {
                     <Label htmlFor="level">Current Level *</Label>
                     <Select
                       value={formData.level}
-                      onValueChange={(value) => handleChange("level", value)}
+                      onValueChange={(value) => {
+                        handleChange("level", value);
+                        // Clear stream if level is not plus2
+                        if (value !== "plus2") {
+                          handleChange("stream", "");
+                        }
+                      }}
                     >
-                      <SelectTrigger id="level">
+                      <SelectTrigger id="level" className={errors.level ? "border-red-500" : ""}>
                         <SelectValue placeholder="Select your level" />
                       </SelectTrigger>
                       <SelectContent>
@@ -229,6 +388,9 @@ export default function StudentRegistration() {
                         <SelectItem value="plus2">+2 (Grade 11-12)</SelectItem>
                       </SelectContent>
                     </Select>
+                    {errors.level && (
+                      <p className="text-sm text-red-500">{errors.level}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -240,8 +402,15 @@ export default function StudentRegistration() {
                       onValueChange={(value) => handleChange("stream", value)}
                       disabled={formData.level !== "plus2"}
                     >
-                      <SelectTrigger id="stream">
-                        <SelectValue placeholder={formData.level === "plus2" ? "Select stream" : "Select level first"} />
+                      <SelectTrigger
+                        id="stream"
+                        className={errors.stream ? "border-red-500" : ""}
+                      >
+                        <SelectValue
+                          placeholder={
+                            formData.level === "plus2" ? "Select stream" : "Select level first"
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="science">Science</SelectItem>
@@ -249,6 +418,9 @@ export default function StudentRegistration() {
                         <SelectItem value="humanities">Humanities</SelectItem>
                       </SelectContent>
                     </Select>
+                    {errors.stream && (
+                      <p className="text-sm text-red-500">{errors.stream}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -258,8 +430,11 @@ export default function StudentRegistration() {
                       placeholder="Enter your school/college name"
                       value={formData.school}
                       onChange={(e) => handleChange("school", e.target.value)}
-                      required
+                      className={errors.school ? "border-red-500" : ""}
                     />
+                    {errors.school && (
+                      <p className="text-sm text-red-500">{errors.school}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -278,8 +453,7 @@ export default function StudentRegistration() {
                         placeholder="Enter password (min 6 characters)"
                         value={formData.password}
                         onChange={(e) => handleChange("password", e.target.value)}
-                        required
-                        className="pr-10"
+                        className={`pr-10 ${errors.password ? "border-red-500" : ""}`}
                       />
                       <button
                         type="button"
@@ -293,6 +467,9 @@ export default function StudentRegistration() {
                         )}
                       </button>
                     </div>
+                    {errors.password && (
+                      <p className="text-sm text-red-500">{errors.password}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -304,8 +481,7 @@ export default function StudentRegistration() {
                         placeholder="Re-enter password"
                         value={formData.confirmPassword}
                         onChange={(e) => handleChange("confirmPassword", e.target.value)}
-                        required
-                        className="pr-10"
+                        className={`pr-10 ${errors.confirmPassword ? "border-red-500" : ""}`}
                       />
                       <button
                         type="button"
@@ -319,34 +495,53 @@ export default function StudentRegistration() {
                         )}
                       </button>
                     </div>
+                    {errors.confirmPassword && (
+                      <p className="text-sm text-red-500">{errors.confirmPassword}</p>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Terms and Conditions */}
-              <div className="flex items-center gap-3 pt-4">
-                <Checkbox
-                  id="terms"
-                  checked={formData.agreeTerms}
-                  onCheckedChange={(checked) => handleChange("agreeTerms", checked)}
-                  required
-                  className="mt-0.5"
-                />
-                <Label htmlFor="terms" className="text-sm cursor-pointer leading-normal">
-                  I agree to the{" "}
-                  <Link href="/terms" className="text-primary hover:underline font-medium">
-                    Terms and Conditions
-                  </Link>{" "}
-                  and{" "}
-                  <Link href="/privacy" className="text-primary hover:underline font-medium">
-                    Privacy Policy
-                  </Link>
-                </Label>
+              <div className="space-y-2 pt-4">
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    id="terms"
+                    checked={formData.agreeTerms}
+                    onCheckedChange={(checked) => handleChange("agreeTerms", checked)}
+                    className="shrink-0"
+                  />
+                  <Label htmlFor="terms" className="text-sm cursor-pointer leading-normal">
+                    I agree to the{" "}
+                    <Link href="/terms" className="text-primary hover:underline font-medium">
+                      Terms and Conditions
+                    </Link>{" "}
+                    and{" "}
+                    <Link href="/privacy" className="text-primary hover:underline font-medium">
+                      Privacy Policy
+                    </Link>
+                  </Label>
+                </div>
+                {errors.agreeTerms && (
+                  <p className="text-sm text-red-500 ml-7">{errors.agreeTerms}</p>
+                )}
               </div>
 
               {/* Submit Button */}
-              <Button type="submit" className="w-full" size="lg">
-                Complete Registration
+              <Button
+                type="submit"
+                className="w-full"
+                size="lg"
+                disabled={registerMutation.isPending || !isFormComplete()}
+              >
+                {registerMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating Account...
+                  </>
+                ) : (
+                  "Complete Registration"
+                )}
               </Button>
 
               <p className="text-center text-sm text-muted-foreground">

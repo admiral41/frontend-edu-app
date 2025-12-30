@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,96 +9,116 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useLogin, getDashboardPath } from "@/lib/hooks/useAuth";
+import { useAuth } from "@/lib/providers/AuthProvider";
 
 export default function Login() {
   const router = useRouter();
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect");
+
+  const { isAuthenticated, isLoading: authLoading, getDashboardPath: getAuthDashboardPath, login: authLogin } = useAuth();
+  const loginMutation = useLogin();
+
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [hasInitialAuthCheck, setHasInitialAuthCheck] = useState(false);
+
+  // Redirect if already authenticated when first loading the page
+  useEffect(() => {
+    if (!authLoading && !hasInitialAuthCheck) {
+      setHasInitialAuthCheck(true);
+      if (isAuthenticated) {
+        router.push(redirectTo || getAuthDashboardPath());
+      }
+    }
+  }, [authLoading, isAuthenticated, router, redirectTo, getAuthDashboardPath, hasInitialAuthCheck]);
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!emailRegex.test(email)) {
+      newErrors.email = "Please enter a valid email address";
+    }
+
+    // Password validation
+    if (!password) {
+      newErrors.password = "Password is required";
+    } else if (password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    if (phoneNumber.length !== 10) {
-      toast.error("Invalid Phone Number", {
-        description: "Please enter a valid 10-digit phone number"
-      });
+    if (!validateForm()) {
       return;
     }
 
-    if (password.length < 6) {
-      toast.error("Invalid Password", {
-        description: "Password must be at least 6 characters"
-      });
-      return;
-    }
+    loginMutation.mutate(
+      { email: email.trim().toLowerCase(), password },
+      {
+        onSuccess: (data) => {
+          // Update AuthProvider state with user data
+          authLogin(data.data, data.token);
 
-    setIsLoading(true);
-
-    try {
-      // Demo mode: Check for demo credentials
-      // In production, this would call the actual auth API via useLogin hook
-      if (phoneNumber === "9800000002" && password === "admin123") {
-        // Demo admin login
-        localStorage.setItem("user", JSON.stringify({ role: "admin", name: "Admin User" }));
-        localStorage.setItem("access_token", "demo_admin_token");
-        toast.success("Login Successful!", {
-          description: "Welcome back, Admin!"
-        });
-        router.push("/admin-dashboard");
-      } else if (phoneNumber === "9800000001" && password === "instructor123") {
-        // Demo instructor login
-        localStorage.setItem("user", JSON.stringify({ role: "instructor", name: "Demo Instructor" }));
-        localStorage.setItem("access_token", "demo_instructor_token");
-        toast.success("Login Successful!", {
-          description: "Welcome back, Instructor!"
-        });
-        router.push("/instructor-dashboard");
-      } else if (phoneNumber === "9800000000" && password === "student123") {
-        // Demo student login
-        localStorage.setItem("user", JSON.stringify({ role: "student", name: "Demo Student" }));
-        localStorage.setItem("access_token", "demo_student_token");
-        toast.success("Login Successful!", {
-          description: "Welcome back to PadhaiHub!"
-        });
-        router.push("/student-dashboard");
-      } else {
-        // Default: redirect to student dashboard for any other login (demo mode)
-        localStorage.setItem("user", JSON.stringify({ role: "student", name: "Student" }));
-        localStorage.setItem("access_token", "demo_token");
-        toast.success("Login Successful!", {
-          description: "Welcome back to PadhaiHub!"
-        });
-        router.push("/student-dashboard");
+          // Redirect based on roles and lecturer status, or custom redirect URL
+          const dashboardPath = redirectTo || getDashboardPath(data.data?.roles, data.data?.lecturerStatus);
+          router.push(dashboardPath);
+        },
+        onError: (error) => {
+          // Handle specific error cases with custom messages
+          if (error.message?.toLowerCase().includes("verify")) {
+            toast.error("Email Not Verified", {
+              description: "Please check your email and verify your account before logging in.",
+            });
+          } else if (error.message?.toLowerCase().includes("suspended")) {
+            toast.error("Account Suspended", {
+              description: "Your account has been suspended. Please contact support.",
+            });
+          } else {
+            // Generic error
+            toast.error(error.message || "Login failed. Please try again.");
+          }
+        },
       }
-    } catch (error) {
-      toast.error("Login Failed", {
-        description: "Please check your credentials and try again."
-      });
-    } finally {
-      setIsLoading(false);
+    );
+  };
+
+  const handleInputChange = (field, value) => {
+    if (field === "email") {
+      setEmail(value);
+    } else if (field === "password") {
+      setPassword(value);
+    }
+
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: "" }));
     }
   };
 
-  // Quick demo login helpers
-  const handleDemoStudentLogin = () => {
-    setPhoneNumber("9800000000");
-    setPassword("student123");
-  };
-
-  const handleDemoInstructorLogin = () => {
-    setPhoneNumber("9800000001");
-    setPassword("instructor123");
-  };
-
-  const handleDemoAdminLogin = () => {
-    setPhoneNumber("9800000002");
-    setPassword("admin123");
-  };
+  // Show loading while checking auth status
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#1e3a5f] via-[#2d5a87] to-secondary">
+        <Loader2 className="h-8 w-8 animate-spin text-white" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1e3a5f] via-[#2d5a87] to-secondary relative overflow-hidden flex items-center justify-center">
@@ -157,9 +177,7 @@ export default function Login() {
       <div className="relative z-10 w-full max-w-md px-4">
         <Card className="shadow-2xl border-0">
           <CardHeader className="text-center pb-4">
-            <CardTitle className="text-2xl md:text-3xl">
-              Welcome Back!
-            </CardTitle>
+            <CardTitle className="text-2xl md:text-3xl">Welcome Back!</CardTitle>
             <CardDescription className="text-base">
               Login to continue your learning journey
             </CardDescription>
@@ -167,18 +185,23 @@ export default function Login() {
 
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
-              {/* Phone Number */}
+              {/* Email */}
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
+                <Label htmlFor="email">Email Address</Label>
                 <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="98XXXXXXXX"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                  id="email"
+                  type="email"
+                  placeholder="your.email@example.com"
+                  value={email}
+                  onChange={(e) => handleInputChange("email", e.target.value)}
                   required
                   autoFocus
+                  autoComplete="email"
+                  className={errors.email ? "border-red-500" : ""}
                 />
+                {errors.email && (
+                  <p className="text-sm text-red-500">{errors.email}</p>
+                )}
               </div>
 
               {/* Password */}
@@ -190,9 +213,10 @@ export default function Login() {
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter your password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => handleInputChange("password", e.target.value)}
                     required
-                    className="pr-10"
+                    autoComplete="current-password"
+                    className={`pr-10 ${errors.password ? "border-red-500" : ""}`}
                   />
                   <button
                     type="button"
@@ -206,6 +230,9 @@ export default function Login() {
                     )}
                   </button>
                 </div>
+                {errors.password && (
+                  <p className="text-sm text-red-500">{errors.password}</p>
+                )}
               </div>
 
               {/* Remember Me & Forgot Password */}
@@ -224,7 +251,7 @@ export default function Login() {
                   </Label>
                 </div>
                 <Link
-                  href="#"
+                  href="/forgot-password"
                   className="text-sm text-primary hover:underline font-medium"
                 >
                   Forgot Password?
@@ -232,55 +259,44 @@ export default function Login() {
               </div>
 
               {/* Login Button */}
-              <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-                {isLoading ? "Logging in..." : "Login"}
+              <Button
+                type="submit"
+                className="w-full"
+                size="lg"
+                disabled={loginMutation.isPending}
+              >
+                {loginMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Logging in...
+                  </>
+                ) : (
+                  "Login"
+                )}
               </Button>
 
-              {/* Demo Login Buttons */}
+              {/* Sign Up Links */}
               <div className="relative my-4">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
                   <span className="bg-background px-2 text-muted-foreground">
-                    Demo Access
+                    New to PadhaiHub?
                   </span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDemoStudentLogin}
-                >
-                  Student
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDemoInstructorLogin}
-                >
-                  Instructor
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDemoAdminLogin}
-                  className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-                >
-                  Admin
-                </Button>
-              </div>
-
-              {/* Sign Up Link */}
-              <div className="text-center text-sm mt-4">
-                <span className="text-muted-foreground">Don't have an account? </span>
-                <Link href="/student-registration" className="text-primary hover:underline font-medium">
-                  Sign up
+              <div className="grid grid-cols-2 gap-3">
+                <Link href="/student-registration" className="w-full">
+                  <Button type="button" variant="outline" className="w-full">
+                    Join as Student
+                  </Button>
+                </Link>
+                <Link href="/instructor-application" className="w-full">
+                  <Button type="button" variant="outline" className="w-full">
+                    Apply as Instructor
+                  </Button>
                 </Link>
               </div>
             </form>

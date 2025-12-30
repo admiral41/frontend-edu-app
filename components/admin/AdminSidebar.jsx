@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAlertDialog } from "@/components/ui/alert-dialog-provider";
-import { toast } from "sonner";
+import { useAuth } from "@/lib/providers/AuthProvider";
 
 const navItems = [
   { href: "/admin-dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -68,8 +68,8 @@ function NavLink({ href, label, icon: Icon, onClick }) {
 }
 
 function SidebarContent({ onLinkClick }) {
-  const router = useRouter();
   const { showAlert } = useAlertDialog();
+  const { logout } = useAuth();
 
   const handleLogout = () => {
     showAlert({
@@ -80,11 +80,7 @@ function SidebarContent({ onLinkClick }) {
       cancelText: "Cancel",
       variant: "destructive",
       onConfirm: () => {
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("refresh_token");
-        localStorage.removeItem("user");
-        toast.success("Logged out successfully!");
-        router.push("/login");
+        logout();
       },
     });
   };
