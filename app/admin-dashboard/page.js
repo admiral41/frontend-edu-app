@@ -8,9 +8,10 @@ import PendingCourses from "@/components/admin/PendingCourses";
 import SystemActivityFeed from "@/components/admin/SystemActivityFeed";
 import QuickActions from "@/components/admin/QuickActions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, BookOpen, DollarSign, Activity, TrendingUp, TrendingDown } from "lucide-react";
+import { Users, BookOpen, Activity, TrendingUp } from "lucide-react";
+import { useAdminDashboard } from "@/lib/hooks/useAdmin";
 
-// Mock revenue data for chart
+// Mock revenue data for chart (TODO: implement revenue endpoint later)
 const revenueData = [
   { day: "Mon", amount: 12500 },
   { day: "Tue", amount: 18200 },
@@ -24,6 +25,13 @@ const revenueData = [
 const maxRevenue = Math.max(...revenueData.map((d) => d.amount));
 
 export default function AdminDashboard() {
+  const { data: dashboardData, isLoading } = useAdminDashboard();
+
+  const stats = dashboardData?.data || {};
+  const users = stats.users || {};
+  const courses = stats.courses || {};
+  const applications = stats.applications || {};
+
   return (
     <AdminDashboardLayout>
       <div className="px-4 py-6 sm:py-8">
@@ -40,26 +48,26 @@ export default function AdminDashboard() {
           <StatsCard
             icon={Users}
             label="Total Users"
-            value="1,245"
-            trend="+48"
+            value={isLoading ? "..." : users.total?.toLocaleString() || "0"}
+            trend={users.newThisMonth ? `+${users.newThisMonth} this month` : null}
           />
           <StatsCard
             icon={BookOpen}
             label="Total Courses"
-            value="32"
-            trend="+3"
+            value={isLoading ? "..." : courses.total?.toLocaleString() || "0"}
+            trend={courses.pendingApproval ? `${courses.pendingApproval} pending` : null}
           />
           <StatsCard
-            icon={DollarSign}
-            label="Revenue (Month)"
-            value="Rs. 2.4L"
-            trend="+18%"
+            icon={Users}
+            label="Students"
+            value={isLoading ? "..." : users.students?.toLocaleString() || "0"}
+            trend={`${users.instructors || 0} instructors`}
           />
           <StatsCard
             icon={Activity}
-            label="Active Today"
-            value="156"
-            trend="+12"
+            label="Pending Applications"
+            value={isLoading ? "..." : applications.pending?.toLocaleString() || "0"}
+            trend={users.suspended ? `${users.suspended} suspended` : null}
           />
         </div>
 
