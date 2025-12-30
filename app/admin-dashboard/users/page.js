@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -15,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -32,134 +33,91 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import {
   Users,
   Search,
-  Plus,
   MoreVertical,
   Eye,
-  Edit,
   Ban,
   CheckCircle,
   Trash2,
-  Key,
   GraduationCap,
   UserCog,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { format } from "date-fns";
-import { toast } from "sonner";
-
-// Mock data
-const usersData = [
-  {
-    id: 1,
-    name: "Aarav Sharma",
-    email: "aarav.sharma@email.com",
-    phone: "9841234567",
-    role: "student",
-    status: "active",
-    joinedAt: new Date("2024-01-15"),
-    coursesCount: 3,
-    avatar: null,
-  },
-  {
-    id: 2,
-    name: "Priya Thapa",
-    email: "priya.thapa@email.com",
-    phone: "9851234567",
-    role: "student",
-    status: "active",
-    joinedAt: new Date("2024-02-20"),
-    coursesCount: 2,
-    avatar: null,
-  },
-  {
-    id: 3,
-    name: "Ramesh Kumar",
-    email: "ramesh.kumar@email.com",
-    phone: "9861234567",
-    role: "instructor",
-    status: "active",
-    joinedAt: new Date("2024-01-10"),
-    coursesCount: 5,
-    avatar: null,
-  },
-  {
-    id: 4,
-    name: "Sunita Adhikari",
-    email: "sunita.adhikari@email.com",
-    phone: "9871234567",
-    role: "instructor",
-    status: "suspended",
-    joinedAt: new Date("2024-02-01"),
-    coursesCount: 2,
-    avatar: null,
-  },
-  {
-    id: 5,
-    name: "Bikash Gurung",
-    email: "bikash.gurung@email.com",
-    phone: "9881234567",
-    role: "student",
-    status: "active",
-    joinedAt: new Date("2024-03-01"),
-    coursesCount: 1,
-    avatar: null,
-  },
-];
+import {
+  useUsers,
+  useSuspendUser,
+  useActivateUser,
+  useDeleteUser,
+} from "@/lib/hooks/useAdmin";
+import { useAlertDialog } from "@/components/ui/alert-dialog-provider";
 
 export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("all");
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [newUser, setNewUser] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    role: "student",
+
+  const { showConfirmation } = useAlertDialog();
+
+  // Fetch users with filters
+  const { data: usersResponse, isLoading, error } = useUsers({
+    search: searchQuery,
+    role: activeTab,
+    status: statusFilter,
   });
 
-  const filteredUsers = usersData.filter((user) => {
-    const matchesSearch =
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.phone.includes(searchQuery);
-    const matchesStatus =
-      statusFilter === "all" || user.status === statusFilter;
-    const matchesRole =
-      activeTab === "all" || user.role === activeTab;
-    return matchesSearch && matchesStatus && matchesRole;
-  });
+  const suspendMutation = useSuspendUser();
+  const activateMutation = useActivateUser();
+  const deleteMutation = useDeleteUser();
 
-  const handleCreateUser = (e) => {
-    e.preventDefault();
-    toast.success("User created successfully!");
-    setIsCreateOpen(false);
-    setNewUser({ name: "", email: "", phone: "", role: "student" });
-  };
+  // Transform backend data
+  const usersData = usersResponse?.data?.users || [];
+  const counts = usersResponse?.data?.counts || { total: 0, students: 0, instructors: 0 };
 
-  const handleSuspend = (userId) => {
-    toast.success("User suspended.");
+  // Transform users to expected format
+  const users = usersData.map((user) => ({
+    id: user._id,
+    name: `${user.firstname || ""} ${user.lastname || ""}`.trim(),
+    email: user.email || "",
+    phone: user.phone || "",
+    role: user.roles?.includes("LECTURER") ? "instructor" : "student",
+    status: user.isSuspended ? "suspended" : "active",
+    joinedAt: user.createdAt ? new Date(user.createdAt) : new Date(),
+    avatar: user.userImage || null,
+  }));
+
+  const handleSuspend = async (userId, userName) => {
+    const confirmed = await showConfirmation({
+      title: "Suspend User",
+      description: `Are you sure you want to suspend ${userName}? They will not be able to access their account.`,
+      confirmText: "Suspend",
+      cancelText: "Cancel",
+      variant: "destructive",
+    });
+
+    if (confirmed) {
+      suspendMutation.mutate({ userId, reason: "Suspended by admin" });
+    }
   };
 
   const handleActivate = (userId) => {
-    toast.success("User activated.");
+    activateMutation.mutate(userId);
   };
 
-  const handleDelete = (userId) => {
-    toast.success("User deleted.");
-  };
+  const handleDelete = async (userId, userName) => {
+    const confirmed = await showConfirmation({
+      title: "Delete User",
+      description: `Are you sure you want to permanently delete ${userName}? This action cannot be undone.`,
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      variant: "destructive",
+    });
 
-  const handleResetPassword = (userId) => {
-    toast.success("Password reset email sent.");
+    if (confirmed) {
+      deleteMutation.mutate(userId);
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -168,8 +126,6 @@ export default function UsersPage() {
         return <Badge className="bg-green-500">Active</Badge>;
       case "suspended":
         return <Badge variant="destructive">Suspended</Badge>;
-      case "pending":
-        return <Badge variant="secondary">Pending</Badge>;
       default:
         return null;
     }
@@ -196,8 +152,49 @@ export default function UsersPage() {
     }
   };
 
-  const studentCount = usersData.filter((u) => u.role === "student").length;
-  const instructorCount = usersData.filter((u) => u.role === "instructor").length;
+  // Loading state
+  if (isLoading) {
+    return (
+      <AdminDashboardLayout>
+        <div className="px-4 py-6 sm:py-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <div>
+              <Skeleton className="h-8 w-32 mb-2" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+          </div>
+          <Skeleton className="h-10 w-80 mb-6" />
+          <Skeleton className="h-12 mb-6" />
+          <Card>
+            <CardContent className="p-0">
+              <div className="p-4 space-y-4">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Skeleton key={i} className="h-16 w-full" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </AdminDashboardLayout>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <AdminDashboardLayout>
+        <div className="px-4 py-6 sm:py-8">
+          <Card>
+            <CardContent className="py-12 text-center">
+              <AlertCircle className="h-12 w-12 mx-auto text-red-500 mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Failed to load users</h3>
+              <p className="text-muted-foreground">{error.message}</p>
+            </CardContent>
+          </Card>
+        </div>
+      </AdminDashboardLayout>
+    );
+  }
 
   return (
     <AdminDashboardLayout>
@@ -210,95 +207,19 @@ export default function UsersPage() {
               Manage students and instructors
             </p>
           </div>
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Add User
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New User</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleCreateUser} className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input
-                    id="name"
-                    value={newUser.name}
-                    onChange={(e) =>
-                      setNewUser({ ...newUser, name: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={newUser.email}
-                    onChange={(e) =>
-                      setNewUser({ ...newUser, email: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    value={newUser.phone}
-                    onChange={(e) =>
-                      setNewUser({ ...newUser, phone: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Role</Label>
-                  <Select
-                    value={newUser.role}
-                    onValueChange={(value) =>
-                      setNewUser({ ...newUser, role: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="student">Student</SelectItem>
-                      <SelectItem value="instructor">Instructor</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsCreateOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit">Create User</Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
         </div>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
           <TabsList>
             <TabsTrigger value="all">
-              All Users ({usersData.length})
+              All Users ({counts.total})
             </TabsTrigger>
             <TabsTrigger value="student">
-              Students ({studentCount})
+              Students ({counts.students})
             </TabsTrigger>
             <TabsTrigger value="instructor">
-              Instructors ({instructorCount})
+              Instructors ({counts.instructors})
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -345,7 +266,7 @@ export default function UsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.map((user) => (
+                {users.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -355,7 +276,8 @@ export default function UsersPage() {
                             {user.name
                               .split(" ")
                               .map((n) => n[0])
-                              .join("")}
+                              .join("")
+                              .toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div>
@@ -390,39 +312,44 @@ export default function UsersPage() {
                               View Details
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin-dashboard/users/${user.id}?edit=true`}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleResetPassword(user.id)}>
-                            <Key className="h-4 w-4 mr-2" />
-                            Reset Password
-                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           {user.status === "active" ? (
                             <DropdownMenuItem
-                              onClick={() => handleSuspend(user.id)}
+                              onClick={() => handleSuspend(user.id, user.name)}
                               className="text-orange-600"
+                              disabled={suspendMutation.isPending}
                             >
-                              <Ban className="h-4 w-4 mr-2" />
+                              {suspendMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <Ban className="h-4 w-4 mr-2" />
+                              )}
                               Suspend
                             </DropdownMenuItem>
                           ) : (
                             <DropdownMenuItem
                               onClick={() => handleActivate(user.id)}
                               className="text-green-600"
+                              disabled={activateMutation.isPending}
                             >
-                              <CheckCircle className="h-4 w-4 mr-2" />
+                              {activateMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                              )}
                               Activate
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem
-                            onClick={() => handleDelete(user.id)}
+                            onClick={() => handleDelete(user.id, user.name)}
                             className="text-destructive"
+                            disabled={deleteMutation.isPending}
                           >
-                            <Trash2 className="h-4 w-4 mr-2" />
+                            {deleteMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4 mr-2" />
+                            )}
                             Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -433,7 +360,7 @@ export default function UsersPage() {
               </TableBody>
             </Table>
 
-            {filteredUsers.length === 0 && (
+            {users.length === 0 && (
               <div className="text-center py-12">
                 <Users className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No users found</h3>

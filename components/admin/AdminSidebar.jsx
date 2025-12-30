@@ -34,7 +34,7 @@ import { useAuth } from "@/lib/providers/AuthProvider";
 const navItems = [
   { href: "/admin-dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin-dashboard/users", label: "Users", icon: Users },
-  { href: "/admin-dashboard/users/applications", label: "Applications", icon: UserPlus },
+  { href: "/admin-dashboard/applications", label: "Applications", icon: UserPlus },
   { href: "/admin-dashboard/courses", label: "Courses", icon: BookOpen },
   { href: "/admin-dashboard/payments", label: "Payments", icon: CreditCard },
   { href: "/admin-dashboard/payments/payouts", label: "Payouts", icon: Wallet },

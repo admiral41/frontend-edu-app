@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import AdminDashboardLayout from "@/components/admin/AdminDashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -21,74 +22,51 @@ import {
   Eye,
   Check,
   X,
-  FileText,
   GraduationCap,
   Briefcase,
-  Mail,
   Phone,
-  Calendar,
   Download,
+  MapPin,
+  Calendar,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
-import { toast } from "sonner";
+import {
+  useApplications,
+  useApproveApplication,
+  useRejectApplication,
+} from "@/lib/hooks/useAdmin";
 
-// Mock data
-const applicationsData = [
-  {
-    id: 1,
-    name: "Ramesh Kumar",
-    email: "ramesh.kumar@email.com",
-    phone: "9861234567",
-    education: "Bachelor's in Computer Science",
-    university: "Tribhuvan University",
-    experience: "5 years",
-    expertise: ["Web Development", "JavaScript", "React"],
-    currentJob: "Senior Developer at Tech Company",
-    teachingLevel: "Intermediate to Advanced",
-    subjects: "Web Development, JavaScript, React, Node.js",
-    whyTeach: "I want to share my industry experience with students and help them build practical skills.",
-    cvUrl: "/uploads/cv-ramesh.pdf",
-    certificatesUrl: "/uploads/certs-ramesh.pdf",
-    appliedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    status: "pending",
-  },
-  {
-    id: 2,
-    name: "Sunita Adhikari",
-    email: "sunita.adhikari@email.com",
-    phone: "9871234567",
-    education: "Master's in Data Science",
-    university: "Kathmandu University",
-    experience: "3 years",
-    expertise: ["Data Science", "Python", "Machine Learning"],
-    currentJob: "Data Scientist at Analytics Firm",
-    teachingLevel: "Beginner to Intermediate",
-    subjects: "Python, Data Science, Machine Learning, Statistics",
-    whyTeach: "Teaching has always been my passion. I want to make data science accessible to everyone.",
-    cvUrl: "/uploads/cv-sunita.pdf",
-    certificatesUrl: "/uploads/certs-sunita.pdf",
-    appliedAt: new Date(Date.now() - 12 * 60 * 60 * 1000),
-    status: "pending",
-  },
-  {
-    id: 3,
-    name: "Prakash Shrestha",
-    email: "prakash.shrestha@email.com",
-    phone: "9881234567",
-    education: "Bachelor's in Software Engineering",
-    university: "Pokhara University",
-    experience: "4 years",
-    expertise: ["Mobile Development", "Flutter", "Dart"],
-    currentJob: "Mobile Developer at Startup",
-    teachingLevel: "All Levels",
-    subjects: "Flutter, Dart, Mobile App Development",
-    whyTeach: "I believe mobile development is the future and I want to train the next generation of app developers.",
-    cvUrl: "/uploads/cv-prakash.pdf",
-    certificatesUrl: null,
-    appliedAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
-    status: "pending",
-  },
-];
+// Helper to map experience years
+const getExperienceLabel = (years) => {
+  if (years === 0 || years === 1) return "Less than 1 year";
+  if (years <= 3) return "1-3 years";
+  if (years <= 5) return "3-5 years";
+  if (years <= 10) return "5-10 years";
+  return "10+ years";
+};
+
+// Helper to map teaching level
+const getTeachingLevelLabel = (level) => {
+  const levels = {
+    see: "SEE (Class 10)",
+    plus2: "+2 (Grade 11-12)",
+    both: "Both SEE and +2",
+  };
+  return levels[level] || level;
+};
+
+// Helper to map education level
+const getEducationLabel = (education) => {
+  const labels = {
+    bachelors: "Bachelor's Degree",
+    masters: "Master's Degree",
+    phd: "PhD",
+    other: "Other",
+  };
+  return labels[education] || education;
+};
 
 export default function ApplicationsPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -97,33 +75,115 @@ export default function ApplicationsPage() {
   const [rejectReason, setRejectReason] = useState("");
   const [applicationToReject, setApplicationToReject] = useState(null);
 
-  const filteredApplications = applicationsData.filter((app) =>
+  // Fetch applications
+  const { data: applicationsData, isLoading, error } = useApplications();
+  const approveMutation = useApproveApplication();
+  const rejectMutation = useRejectApplication();
+
+  // Transform backend data to frontend format
+  const applications = (applicationsData?.data || []).map((app) => ({
+    id: app._id,
+    name: app.user ? `${app.user.firstname || ""} ${app.user.lastname || ""}`.trim() : "Unknown",
+    email: app.user?.email || "",
+    phone: app.user?.phone || "",
+    gender: app.user?.gender || "",
+    address: app.user?.address || "",
+    dob: app.user?.dob,
+    education: getEducationLabel(app.user?.highestEducation),
+    university: app.user?.universityCollege || "",
+    major: app.user?.majorSpecialization || "",
+    experience: getExperienceLabel(app.user?.teachingExperience || 0),
+    currentJob: app.user?.employmentStatus || "",
+    teachingLevel: getTeachingLevelLabel(app.user?.preferredLevel),
+    subjects: app.user?.subjects || [],
+    availability: app.user?.availability || "",
+    whyTeach: app.user?.teachingMotivation || "",
+    cvUrl: app.cvUrl || null,
+    certificatesUrl: app.certificatesUrl || null,
+    appliedAt: app.createdAt ? new Date(app.createdAt) : new Date(),
+    status: app.requestStatus,
+  }));
+
+  // Filter applications based on search
+  const filteredApplications = applications.filter((app) =>
     app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     app.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    app.expertise.some((e) => e.toLowerCase().includes(searchQuery.toLowerCase()))
+    (Array.isArray(app.subjects) && app.subjects.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase())))
   );
 
   const handleApprove = (applicationId) => {
-    toast.success("Application approved! Instructor account created.");
-    setSelectedApplication(null);
+    approveMutation.mutate(applicationId, {
+      onSuccess: () => {
+        setSelectedApplication(null);
+      },
+    });
   };
 
   const handleReject = () => {
     if (!rejectReason.trim()) {
-      toast.error("Please provide a reason for rejection.");
       return;
     }
-    toast.success("Application rejected. Applicant will be notified.");
-    setIsRejectDialogOpen(false);
-    setRejectReason("");
-    setApplicationToReject(null);
-    setSelectedApplication(null);
+    rejectMutation.mutate(
+      { applicationId: applicationToReject.id, reason: rejectReason },
+      {
+        onSuccess: () => {
+          setIsRejectDialogOpen(false);
+          setRejectReason("");
+          setApplicationToReject(null);
+          setSelectedApplication(null);
+        },
+      }
+    );
   };
 
   const openRejectDialog = (application) => {
     setApplicationToReject(application);
     setIsRejectDialogOpen(true);
   };
+
+  const pendingCount = applications.filter((a) => a.status === "pending").length;
+
+  // Loading skeleton
+  if (isLoading) {
+    return (
+      <AdminDashboardLayout>
+        <div className="px-4 py-6 sm:py-8">
+          <div className="mb-6">
+            <Skeleton className="h-8 w-64 mb-2" />
+            <Skeleton className="h-4 w-96" />
+          </div>
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-20" />
+            ))}
+          </div>
+          <Skeleton className="h-12 mb-6" />
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-40" />
+            ))}
+          </div>
+        </div>
+      </AdminDashboardLayout>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <AdminDashboardLayout>
+        <div className="px-4 py-6 sm:py-8">
+          <Card>
+            <CardContent className="py-12 text-center">
+              <AlertCircle className="h-12 w-12 mx-auto text-red-500 mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Failed to load applications</h3>
+              <p className="text-muted-foreground">{error.message}</p>
+            </CardContent>
+          </Card>
+        </div>
+      </AdminDashboardLayout>
+    );
+  }
 
   return (
     <AdminDashboardLayout>
@@ -142,21 +202,19 @@ export default function ApplicationsPage() {
         <div className="grid grid-cols-3 gap-4 mb-6">
           <Card>
             <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-orange-500">
-                {applicationsData.filter((a) => a.status === "pending").length}
-              </p>
+              <p className="text-2xl font-bold text-orange-500">{pendingCount}</p>
               <p className="text-sm text-muted-foreground">Pending</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-green-500">0</p>
+              <p className="text-2xl font-bold text-green-500">-</p>
               <p className="text-sm text-muted-foreground">Approved Today</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-red-500">0</p>
+              <p className="text-2xl font-bold text-red-500">-</p>
               <p className="text-sm text-muted-foreground">Rejected Today</p>
             </CardContent>
           </Card>
@@ -168,7 +226,7 @@ export default function ApplicationsPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by name, email, or expertise..."
+                placeholder="Search by name, email, or subject..."
                 className="pl-10"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -201,7 +259,8 @@ export default function ApplicationsPage() {
                         {application.name
                           .split(" ")
                           .map((n) => n[0])
-                          .join("")}
+                          .join("")
+                          .toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
 
@@ -219,9 +278,9 @@ export default function ApplicationsPage() {
                       </div>
 
                       <div className="flex flex-wrap gap-2 mb-3">
-                        {application.expertise.map((skill) => (
-                          <Badge key={skill} variant="outline">
-                            {skill}
+                        {Array.isArray(application.subjects) && application.subjects.map((subject) => (
+                          <Badge key={subject} variant="outline">
+                            {subject}
                           </Badge>
                         ))}
                       </div>
@@ -254,8 +313,13 @@ export default function ApplicationsPage() {
                           size="sm"
                           className="bg-green-600 hover:bg-green-700"
                           onClick={() => handleApprove(application.id)}
+                          disabled={approveMutation.isPending}
                         >
-                          <Check className="h-4 w-4 mr-1" />
+                          {approveMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                          ) : (
+                            <Check className="h-4 w-4 mr-1" />
+                          )}
                           Approve
                         </Button>
                         <Button
@@ -303,6 +367,24 @@ export default function ApplicationsPage() {
                       <p className="font-medium">{selectedApplication.phone}</p>
                     </div>
                     <div>
+                      <span className="text-muted-foreground">Gender:</span>
+                      <p className="font-medium">{selectedApplication.gender || "-"}</p>
+                    </div>
+                    {selectedApplication.dob && (
+                      <div>
+                        <span className="text-muted-foreground">Date of Birth:</span>
+                        <p className="font-medium">
+                          {format(new Date(selectedApplication.dob), "MMM d, yyyy")}
+                        </p>
+                      </div>
+                    )}
+                    {selectedApplication.address && (
+                      <div>
+                        <span className="text-muted-foreground">Address:</span>
+                        <p className="font-medium">{selectedApplication.address}</p>
+                      </div>
+                    )}
+                    <div>
                       <span className="text-muted-foreground">Applied:</span>
                       <p className="font-medium">
                         {format(selectedApplication.appliedAt, "MMM d, yyyy 'at' h:mm a")}
@@ -316,59 +398,81 @@ export default function ApplicationsPage() {
                   <h4 className="font-semibold mb-3">Education</h4>
                   <div className="grid sm:grid-cols-2 gap-3 text-sm">
                     <div>
-                      <span className="text-muted-foreground">Degree:</span>
+                      <span className="text-muted-foreground">Highest Education:</span>
                       <p className="font-medium">{selectedApplication.education}</p>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">University:</span>
-                      <p className="font-medium">{selectedApplication.university}</p>
+                      <span className="text-muted-foreground">University/College:</span>
+                      <p className="font-medium">{selectedApplication.university || "-"}</p>
                     </div>
+                    {selectedApplication.major && (
+                      <div>
+                        <span className="text-muted-foreground">Major/Specialization:</span>
+                        <p className="font-medium">{selectedApplication.major}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Experience */}
                 <div>
-                  <h4 className="font-semibold mb-3">Experience</h4>
+                  <h4 className="font-semibold mb-3">Teaching Experience</h4>
                   <div className="grid sm:grid-cols-2 gap-3 text-sm">
                     <div>
                       <span className="text-muted-foreground">Years of Experience:</span>
                       <p className="font-medium">{selectedApplication.experience}</p>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Current Position:</span>
-                      <p className="font-medium">{selectedApplication.currentJob}</p>
+                      <span className="text-muted-foreground">Employment Status:</span>
+                      <p className="font-medium">{selectedApplication.currentJob || "-"}</p>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Teaching Level:</span>
+                      <span className="text-muted-foreground">Preferred Teaching Level:</span>
                       <p className="font-medium">{selectedApplication.teachingLevel}</p>
                     </div>
                     <div>
+                      <span className="text-muted-foreground">Availability:</span>
+                      <p className="font-medium">{selectedApplication.availability || "-"}</p>
+                    </div>
+                    <div className="sm:col-span-2">
                       <span className="text-muted-foreground">Subjects:</span>
-                      <p className="font-medium">{selectedApplication.subjects}</p>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {Array.isArray(selectedApplication.subjects) && selectedApplication.subjects.map((subject) => (
+                          <Badge key={subject} variant="outline">
+                            {subject}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Why Teach */}
                 <div>
-                  <h4 className="font-semibold mb-3">Why do you want to teach?</h4>
-                  <p className="text-sm">{selectedApplication.whyTeach}</p>
+                  <h4 className="font-semibold mb-3">Why do you want to teach at PadhaiHub?</h4>
+                  <p className="text-sm">{selectedApplication.whyTeach || "-"}</p>
                 </div>
 
                 {/* Documents */}
                 <div>
                   <h4 className="font-semibold mb-3">Documents</h4>
                   <div className="flex gap-2">
-                    {selectedApplication.cvUrl && (
-                      <Button variant="outline" size="sm">
-                        <Download className="h-4 w-4 mr-1" />
-                        Download CV
+                    {selectedApplication.cvUrl ? (
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={selectedApplication.cvUrl} target="_blank" rel="noopener noreferrer">
+                          <Download className="h-4 w-4 mr-1" />
+                          Download CV
+                        </a>
                       </Button>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">No CV uploaded</span>
                     )}
                     {selectedApplication.certificatesUrl && (
-                      <Button variant="outline" size="sm">
-                        <Download className="h-4 w-4 mr-1" />
-                        Download Certificates
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={selectedApplication.certificatesUrl} target="_blank" rel="noopener noreferrer">
+                          <Download className="h-4 w-4 mr-1" />
+                          Download Certificates
+                        </a>
                       </Button>
                     )}
                   </div>
@@ -379,8 +483,13 @@ export default function ApplicationsPage() {
                   <Button
                     className="flex-1 bg-green-600 hover:bg-green-700"
                     onClick={() => handleApprove(selectedApplication.id)}
+                    disabled={approveMutation.isPending}
                   >
-                    <Check className="h-4 w-4 mr-2" />
+                    {approveMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Check className="h-4 w-4 mr-2" />
+                    )}
                     Approve Application
                   </Button>
                   <Button
@@ -430,7 +539,11 @@ export default function ApplicationsPage() {
                   variant="destructive"
                   className="flex-1"
                   onClick={handleReject}
+                  disabled={rejectMutation.isPending || !rejectReason.trim()}
                 >
+                  {rejectMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : null}
                   Reject Application
                 </Button>
               </div>

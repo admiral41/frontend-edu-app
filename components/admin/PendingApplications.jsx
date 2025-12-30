@@ -5,46 +5,63 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { UserPlus, Check, X } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { UserPlus, Check, X, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { toast } from "sonner";
+import { useApplications, useApproveApplication, useRejectApplication } from "@/lib/hooks/useAdmin";
 
-// Mock data
-const pendingApplications = [
-  {
-    id: 1,
-    name: "Ramesh Kumar",
-    email: "ramesh.kumar@email.com",
-    expertise: "Web Development, JavaScript",
-    experience: "5 years",
-    appliedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-  },
-  {
-    id: 2,
-    name: "Sunita Adhikari",
-    email: "sunita.adhikari@email.com",
-    expertise: "Data Science, Python",
-    experience: "3 years",
-    appliedAt: new Date(Date.now() - 12 * 60 * 60 * 1000),
-  },
-  {
-    id: 3,
-    name: "Prakash Shrestha",
-    email: "prakash.shrestha@email.com",
-    expertise: "Mobile Development, Flutter",
-    experience: "4 years",
-    appliedAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
-  },
-];
+// Helper to map experience years
+const getExperienceLabel = (years) => {
+  if (years === 0 || years === 1) return "Less than 1 year";
+  if (years <= 3) return "1-3 years";
+  if (years <= 5) return "3-5 years";
+  if (years <= 10) return "5-10 years";
+  return "10+ years";
+};
 
 export default function PendingApplications() {
+  const { data: applicationsData, isLoading } = useApplications();
+  const approveMutation = useApproveApplication();
+  const rejectMutation = useRejectApplication();
+
+  // Transform backend data
+  const pendingApplications = (applicationsData?.data || []).map((app) => ({
+    id: app._id,
+    name: app.user ? `${app.user.firstname || ""} ${app.user.lastname || ""}`.trim() : "Unknown",
+    email: app.user?.email || "",
+    expertise: Array.isArray(app.user?.subjects) ? app.user.subjects.join(", ") : "",
+    experience: getExperienceLabel(app.user?.teachingExperience || 0),
+    appliedAt: app.createdAt ? new Date(app.createdAt) : new Date(),
+  }));
+
   const handleQuickApprove = (id) => {
-    toast.success("Application approved!");
+    approveMutation.mutate(id);
   };
 
   const handleQuickReject = (id) => {
-    toast.success("Application rejected.");
+    rejectMutation.mutate({ applicationId: id, reason: "Application rejected by admin." });
   };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-primary" />
+              Instructor Applications
+            </CardTitle>
+            <Skeleton className="h-5 w-16" />
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-24 w-full" />
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -75,13 +92,14 @@ export default function PendingApplications() {
                       {application.name
                         .split(" ")
                         .map((n) => n[0])
-                        .join("")}
+                        .join("")
+                        .toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">{application.name}</p>
                     <p className="text-xs text-muted-foreground truncate">
-                      {application.expertise}
+                      {application.expertise || "No subjects specified"}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {application.experience} · Applied{" "}
@@ -95,8 +113,13 @@ export default function PendingApplications() {
                     variant="outline"
                     className="flex-1 text-green-600 hover:text-green-700 hover:bg-green-50"
                     onClick={() => handleQuickApprove(application.id)}
+                    disabled={approveMutation.isPending}
                   >
-                    <Check className="h-4 w-4 mr-1" />
+                    {approveMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <Check className="h-4 w-4 mr-1" />
+                    )}
                     Approve
                   </Button>
                   <Button
@@ -104,14 +127,19 @@ export default function PendingApplications() {
                     variant="outline"
                     className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
                     onClick={() => handleQuickReject(application.id)}
+                    disabled={rejectMutation.isPending}
                   >
-                    <X className="h-4 w-4 mr-1" />
+                    {rejectMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <X className="h-4 w-4 mr-1" />
+                    )}
                     Reject
                   </Button>
                 </div>
               </div>
             ))}
-            <Link href="/admin-dashboard/users/applications">
+            <Link href="/admin-dashboard/applications">
               <Button variant="outline" className="w-full" size="sm">
                 View All Applications
               </Button>
