@@ -4,6 +4,7 @@ import { AlertDialogProvider } from "@/components/ui/alert-dialog-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import QueryProvider from "@/lib/providers/QueryProvider";
 import { AuthProvider } from "@/lib/providers/AuthProvider";
+import { NotificationProvider } from "@/lib/providers/NotificationProvider";
 
 export const metadata = {
   title: "PadhaiHub - Nepal's #1 Online Learning Platform",
@@ -16,17 +17,19 @@ export default function RootLayout({ children }) {
       <body className="overflow-x-hidden" suppressHydrationWarning>
         <QueryProvider>
           <AuthProvider>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="system"
-              enableSystem
-              disableTransitionOnChange
-            >
-              <AlertDialogProvider>
-                {children}
-                <Toaster />
-              </AlertDialogProvider>
-            </ThemeProvider>
+            <NotificationProvider>
+              <ThemeProvider
+                attribute="class"
+                defaultTheme="system"
+                enableSystem
+                disableTransitionOnChange
+              >
+                <AlertDialogProvider>
+                  {children}
+                  <Toaster />
+                </AlertDialogProvider>
+              </ThemeProvider>
+            </NotificationProvider>
           </AuthProvider>
         </QueryProvider>
       </body>

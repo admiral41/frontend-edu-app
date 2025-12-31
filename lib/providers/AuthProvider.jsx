@@ -142,10 +142,17 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // Get current access token
+  const token = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    return authService.getAccessToken();
+  }, [isAuthenticated]);
+
   // Memoize context value to prevent unnecessary re-renders
   const value = useMemo(
     () => ({
       user,
+      token,
       isLoading,
       isAuthenticated,
       login,
@@ -156,6 +163,7 @@ export function AuthProvider({ children }) {
     }),
     [
       user,
+      token,
       isLoading,
       isAuthenticated,
       login,

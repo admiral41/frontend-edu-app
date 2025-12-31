@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useLogin, getDashboardPath } from "@/lib/hooks/useAuth";
+import { useLogin, getDashboardPath, isValidRedirectForRole } from "@/lib/hooks/useAuth";
 import { useAuth } from "@/lib/providers/AuthProvider";
 
 export default function Login() {
@@ -75,8 +75,13 @@ export default function Login() {
           // Update AuthProvider state with user data
           authLogin(data.data, data.token);
 
-          // Redirect based on roles and lecturer status, or custom redirect URL
-          const dashboardPath = redirectTo || getDashboardPath(data.data?.roles, data.data?.lecturerStatus);
+          // Get the default dashboard path for this user's role
+          const defaultDashboard = getDashboardPath(data.data?.roles, data.data?.lecturerStatus);
+
+          // Only use redirectTo if it's valid for the user's role
+          const isRedirectValid = redirectTo && isValidRedirectForRole(redirectTo, data.data?.roles);
+          const dashboardPath = isRedirectValid ? redirectTo : defaultDashboard;
+
           router.push(dashboardPath);
         },
         onError: (error) => {

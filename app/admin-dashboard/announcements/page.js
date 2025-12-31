@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -43,69 +44,17 @@ import {
   Calendar,
   Clock,
   Send,
+  Loader2,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { useAlertDialog } from "@/components/ui/alert-dialog-provider";
-
-// Mock data
-const announcementsData = [
-  {
-    id: 1,
-    title: "Platform Maintenance Scheduled",
-    content: "We will be performing scheduled maintenance on our servers this Saturday from 2 AM to 6 AM NPT. During this time, the platform may be temporarily unavailable. We apologize for any inconvenience.",
-    audience: "all",
-    status: "published",
-    priority: "high",
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    publishedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    views: 342,
-  },
-  {
-    id: 2,
-    title: "New Courses Available This Month",
-    content: "We're excited to announce 5 new courses launching this month! Topics include Advanced React Patterns, Python for Finance, and more. Check out the course catalog for details.",
-    audience: "students",
-    status: "published",
-    priority: "normal",
-    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
-    publishedAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
-    views: 567,
-  },
-  {
-    id: 3,
-    title: "Instructor Payout Schedule Update",
-    content: "Starting next month, instructor payouts will be processed bi-weekly instead of monthly. Please ensure your bank details are up to date in your profile settings.",
-    audience: "instructors",
-    status: "published",
-    priority: "normal",
-    createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
-    publishedAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
-    views: 45,
-  },
-  {
-    id: 4,
-    title: "Dashain Holiday Notice",
-    content: "Wishing all our users a happy Dashain! Our support team will have limited availability from October 15-25. For urgent issues, please email support@padhaihub.com.",
-    audience: "all",
-    status: "draft",
-    priority: "normal",
-    createdAt: new Date(Date.now() - 72 * 60 * 60 * 1000),
-    scheduledFor: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    views: 0,
-  },
-  {
-    id: 5,
-    title: "Course Creation Guidelines Updated",
-    content: "We've updated our course creation guidelines to ensure higher quality content. Please review the new guidelines in your instructor dashboard before submitting new courses.",
-    audience: "instructors",
-    status: "published",
-    priority: "high",
-    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-    publishedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-    views: 38,
-  },
-];
+import {
+  useAdminAnnouncements,
+  useCreateAdminAnnouncement,
+  useUpdateAdminAnnouncement,
+  useDeleteAdminAnnouncement,
+} from "@/lib/hooks/useAdmin";
 
 export default function AnnouncementsPage() {
   const { showAlert } = useAlertDialog();
@@ -119,19 +68,21 @@ export default function AnnouncementsPage() {
     content: "",
     audience: "all",
     priority: "normal",
-    scheduleFor: "",
+    scheduledAt: "",
   });
 
-  const filteredAnnouncements = announcementsData.filter((announcement) => {
-    const matchesSearch =
-      announcement.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      announcement.content.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesAudience =
-      audienceFilter === "all" || announcement.audience === audienceFilter;
-    const matchesStatus =
-      statusFilter === "all" || announcement.status === statusFilter;
-    return matchesSearch && matchesAudience && matchesStatus;
+  // Fetch announcements
+  const { data: announcementsResponse, isLoading } = useAdminAnnouncements({
+    status: statusFilter !== "all" ? statusFilter : undefined,
+    targetAudience: audienceFilter !== "all" ? audienceFilter : undefined,
+    search: searchQuery || undefined,
   });
+
+  const createMutation = useCreateAdminAnnouncement();
+  const updateMutation = useUpdateAdminAnnouncement();
+  const deleteMutation = useDeleteAdminAnnouncement();
+
+  const announcements = announcementsResponse?.data?.announcements || [];
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -139,19 +90,44 @@ export default function AnnouncementsPage() {
       toast.error("Please fill in all required fields.");
       return;
     }
+
+    const announcementData = {
+      title: formData.title,
+      content: formData.content,
+      targetAudience: formData.audience,
+      priority: formData.priority,
+      status: formData.scheduledAt ? "scheduled" : "published",
+      scheduledAt: formData.scheduledAt || undefined,
+    };
+
     if (editingAnnouncement) {
-      toast.success("Announcement updated successfully!");
+      updateMutation.mutate(
+        { announcementId: editingAnnouncement._id, announcementData },
+        {
+          onSuccess: () => {
+            setIsCreateOpen(false);
+            setEditingAnnouncement(null);
+            resetForm();
+          },
+        }
+      );
     } else {
-      toast.success("Announcement created successfully!");
+      createMutation.mutate(announcementData, {
+        onSuccess: () => {
+          setIsCreateOpen(false);
+          resetForm();
+        },
+      });
     }
-    setIsCreateOpen(false);
-    setEditingAnnouncement(null);
+  };
+
+  const resetForm = () => {
     setFormData({
       title: "",
       content: "",
       audience: "all",
       priority: "normal",
-      scheduleFor: "",
+      scheduledAt: "",
     });
   };
 
@@ -160,9 +136,11 @@ export default function AnnouncementsPage() {
     setFormData({
       title: announcement.title,
       content: announcement.content,
-      audience: announcement.audience,
+      audience: announcement.targetAudience,
       priority: announcement.priority,
-      scheduleFor: "",
+      scheduledAt: announcement.scheduledAt
+        ? new Date(announcement.scheduledAt).toISOString().slice(0, 16)
+        : "",
     });
     setIsCreateOpen(true);
   };
@@ -175,21 +153,21 @@ export default function AnnouncementsPage() {
       cancelText: "Cancel",
       variant: "destructive",
       onConfirm: () => {
-        toast.success("Announcement deleted.");
+        deleteMutation.mutate(announcement._id);
       },
     });
   };
 
   const handleTogglePublish = (announcement) => {
-    if (announcement.status === "published") {
-      toast.success("Announcement unpublished.");
-    } else {
-      toast.success("Announcement published!");
-    }
+    const newStatus = announcement.status === "published" ? "draft" : "published";
+    updateMutation.mutate({
+      announcementId: announcement._id,
+      announcementData: { status: newStatus },
+    });
   };
 
-  const getAudienceBadge = (audience) => {
-    switch (audience) {
+  const getAudienceBadge = (targetAudience) => {
+    switch (targetAudience) {
       case "all":
         return (
           <Badge variant="outline" className="gap-1">
@@ -236,8 +214,10 @@ export default function AnnouncementsPage() {
     return null;
   };
 
-  const publishedCount = announcementsData.filter((a) => a.status === "published").length;
-  const draftCount = announcementsData.filter((a) => a.status === "draft").length;
+  const publishedCount = announcements.filter((a) => a.status === "published").length;
+  const draftCount = announcements.filter((a) => a.status === "draft").length;
+  const scheduledCount = announcements.filter((a) => a.status === "scheduled").length;
+  const isMutating = createMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
 
   return (
     <AdminDashboardLayout>
@@ -343,9 +323,9 @@ export default function AnnouncementsPage() {
                   <Input
                     id="schedule"
                     type="datetime-local"
-                    value={formData.scheduleFor}
+                    value={formData.scheduledAt}
                     onChange={(e) =>
-                      setFormData({ ...formData, scheduleFor: e.target.value })
+                      setFormData({ ...formData, scheduledAt: e.target.value })
                     }
                   />
                   <p className="text-xs text-muted-foreground">
@@ -357,12 +337,21 @@ export default function AnnouncementsPage() {
                     type="button"
                     variant="outline"
                     onClick={() => setIsCreateOpen(false)}
+                    disabled={isMutating}
                   >
                     Cancel
                   </Button>
-                  <Button type="submit">
-                    <Send className="h-4 w-4 mr-2" />
-                    {editingAnnouncement ? "Update" : "Publish"}
+                  <Button type="submit" disabled={isMutating}>
+                    {isMutating ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4 mr-2" />
+                    )}
+                    {editingAnnouncement
+                      ? "Update"
+                      : formData.scheduledAt
+                      ? "Schedule"
+                      : "Publish"}
                   </Button>
                 </div>
               </form>
@@ -371,10 +360,10 @@ export default function AnnouncementsPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
           <Card>
             <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold">{announcementsData.length}</p>
+              <p className="text-2xl font-bold">{announcements.length}</p>
               <p className="text-sm text-muted-foreground">Total</p>
             </CardContent>
           </Card>
@@ -382,6 +371,12 @@ export default function AnnouncementsPage() {
             <CardContent className="p-4 text-center">
               <p className="text-2xl font-bold text-green-500">{publishedCount}</p>
               <p className="text-sm text-muted-foreground">Published</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl font-bold text-blue-500">{scheduledCount}</p>
+              <p className="text-sm text-muted-foreground">Scheduled</p>
             </CardContent>
           </Card>
           <Card>
@@ -422,6 +417,7 @@ export default function AnnouncementsPage() {
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="published">Published</SelectItem>
+                  <SelectItem value="scheduled">Scheduled</SelectItem>
                   <SelectItem value="draft">Draft</SelectItem>
                 </SelectContent>
               </Select>
@@ -431,7 +427,19 @@ export default function AnnouncementsPage() {
 
         {/* Announcements List */}
         <div className="space-y-4">
-          {filteredAnnouncements.length === 0 ? (
+          {isLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <Card key={i}>
+                  <CardContent className="p-4 sm:p-6">
+                    <Skeleton className="h-6 w-1/3 mb-2" />
+                    <Skeleton className="h-4 w-full mb-3" />
+                    <Skeleton className="h-4 w-1/4" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : announcements.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
                 <Megaphone className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
@@ -444,8 +452,8 @@ export default function AnnouncementsPage() {
               </CardContent>
             </Card>
           ) : (
-            filteredAnnouncements.map((announcement) => (
-              <Card key={announcement.id}>
+            announcements.map((announcement) => (
+              <Card key={announcement._id}>
                 <CardContent className="p-4 sm:p-6">
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
@@ -457,25 +465,31 @@ export default function AnnouncementsPage() {
                         {announcement.content}
                       </p>
                       <div className="flex flex-wrap items-center gap-3">
-                        {getAudienceBadge(announcement.audience)}
+                        {getAudienceBadge(announcement.targetAudience)}
                         {getStatusBadge(announcement.status)}
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          {formatDistanceToNow(announcement.createdAt, {
+                          {formatDistanceToNow(new Date(announcement.createdAt), {
                             addSuffix: true,
                           })}
                         </span>
-                        {announcement.status === "published" && (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Eye className="h-3 w-3" />
-                            {announcement.views} views
-                          </span>
-                        )}
-                        {announcement.scheduledFor && (
+                        {announcement.status === "scheduled" && announcement.scheduledAt && (
                           <span className="text-xs text-blue-600 flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            Scheduled: {format(announcement.scheduledFor, "MMM d, h:mm a")}
+                            Scheduled: {format(new Date(announcement.scheduledAt), "MMM d, h:mm a")}
                           </span>
+                        )}
+                        {announcement.status === "published" && (
+                          <>
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Eye className="h-3 w-3" />
+                              {announcement.viewCount || 0} views
+                            </span>
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Users className="h-3 w-3" />
+                              {announcement.readCount || 0} read
+                            </span>
+                          </>
                         )}
                       </div>
                     </div>

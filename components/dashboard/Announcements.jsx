@@ -1,56 +1,61 @@
 "use client";
 
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Bell, AlertCircle, Info, Megaphone, Check } from "lucide-react";
-import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Bell, AlertCircle, Megaphone, Check, Loader2 } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { useAnnouncements, useMarkAnnouncementRead } from "@/lib/hooks/useAnnouncements";
 
 export default function Announcements() {
-  const [announcements, setAnnouncements] = useState([
-    {
-      id: 1,
-      type: "urgent",
-      title: "Exam Schedule Released",
-      message: "SEE trial exam will be held on Dec 15-20. Check your email for details.",
-      date: "Today",
-      icon: AlertCircle,
-      variant: "destructive",
-    },
-    {
-      id: 2,
-      type: "notice",
-      title: "Holiday Notice",
-      message: "Classes will remain closed on Dec 25-26 for Christmas holidays.",
-      date: "Yesterday",
-      icon: Bell,
-      variant: "secondary",
-    },
-    {
-      id: 3,
-      type: "announcement",
-      title: "New Course Available",
-      message: "Advanced Mathematics course is now available for +2 students.",
-      date: "2 days ago",
-      icon: Megaphone,
-      variant: "default",
-    },
-    {
-      id: 4,
-      type: "info",
-      title: "Study Material Updated",
-      message: "New practice questions added to Physics module.",
-      date: "3 days ago",
-      icon: Info,
-      variant: "outline",
-    },
-  ]);
+  const { data: response, isLoading } = useAnnouncements({ limit: 5 });
+  const markAsReadMutation = useMarkAnnouncementRead();
+
+  const announcements = response?.data?.announcements || [];
 
   const handleMarkAsRead = (id) => {
-    setAnnouncements(announcements.filter((item) => item.id !== id));
-    toast.success("Marked as read");
+    markAsReadMutation.mutate(id);
   };
+
+  const getPriorityStyles = (priority) => {
+    if (priority === "high") {
+      return {
+        icon: AlertCircle,
+        variant: "destructive",
+        iconClass: "text-destructive",
+      };
+    }
+    return {
+      icon: Megaphone,
+      variant: "default",
+      iconClass: "text-primary",
+    };
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+            <Bell className="h-5 w-5 text-primary" />
+            Notices & Announcements
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="p-3 border rounded-lg">
+                <Skeleton className="h-5 w-3/4 mb-2" />
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-3 w-1/4" />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -63,23 +68,24 @@ export default function Announcements() {
       <CardContent>
         {announcements.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground">
-            <p className="text-sm">No new announcements</p>
+            <Megaphone className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">No announcements</p>
           </div>
         ) : (
           <div className="space-y-3">
             {announcements.map((item) => {
-              const Icon = item.icon;
+              const { icon: Icon, variant, iconClass } = getPriorityStyles(item.priority);
+              const isRead = item.isRead;
+
               return (
                 <div
-                  key={item.id}
-                  className="p-3 border rounded-lg hover:shadow-sm transition-shadow"
+                  key={item._id}
+                  className={`p-3 border rounded-lg hover:shadow-sm transition-shadow ${
+                    !isRead ? "bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800" : ""
+                  }`}
                 >
                   <div className="flex items-start gap-3 mb-3">
-                    <div className={`mt-0.5 shrink-0 ${
-                      item.variant === "destructive" ? "text-destructive" :
-                      item.variant === "default" ? "text-primary" :
-                      "text-muted-foreground"
-                    }`}>
+                    <div className={`mt-0.5 shrink-0 ${iconClass}`}>
                       <Icon className="h-5 w-5" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -87,25 +93,36 @@ export default function Announcements() {
                         <h4 className="font-semibold text-sm sm:text-base line-clamp-1">
                           {item.title}
                         </h4>
-                        <Badge variant={item.variant} className="text-xs shrink-0">
-                          {item.type}
-                        </Badge>
+                        {item.priority === "high" && (
+                          <Badge variant={variant} className="text-xs shrink-0">
+                            Urgent
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mb-1">
-                        {item.message}
+                        {item.content}
                       </p>
-                      <p className="text-xs text-muted-foreground">{item.date}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.createdBy?.firstname} {item.createdBy?.lastname} · {formatDistanceToNow(new Date(item.publishedAt || item.createdAt), { addSuffix: true })}
+                      </p>
                     </div>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => handleMarkAsRead(item.id)}
-                  >
-                    <Check className="h-4 w-4 mr-2" />
-                    Mark as Read
-                  </Button>
+                  {!isRead && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => handleMarkAsRead(item._id)}
+                      disabled={markAsReadMutation.isPending}
+                    >
+                      {markAsReadMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Check className="h-4 w-4 mr-2" />
+                      )}
+                      Mark as Read
+                    </Button>
+                  )}
                 </div>
               );
             })}

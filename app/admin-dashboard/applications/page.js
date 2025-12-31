@@ -80,6 +80,18 @@ export default function ApplicationsPage() {
   const approveMutation = useApproveApplication();
   const rejectMutation = useRejectApplication();
 
+  // Backend URL for file downloads
+  const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+  // Helper to construct full file URL
+  const getFileUrl = (filePath) => {
+    if (!filePath) return null;
+    // If already a full URL, return as-is
+    if (filePath.startsWith('http')) return filePath;
+    // Prepend backend URL
+    return `${backendUrl}/${filePath}`;
+  };
+
   // Transform backend data to frontend format
   const applications = (applicationsData?.data || []).map((app) => ({
     id: app._id,
@@ -98,8 +110,9 @@ export default function ApplicationsPage() {
     subjects: app.user?.subjects || [],
     availability: app.user?.availability || "",
     whyTeach: app.user?.teachingMotivation || "",
-    cvUrl: app.cvUrl || null,
-    certificatesUrl: app.certificatesUrl || null,
+    cvUrl: getFileUrl(app.cv),
+    certificatesUrl: getFileUrl(app.certificates?.[0]),
+    allCertificates: app.certificates?.map(getFileUrl) || [],
     appliedAt: app.createdAt ? new Date(app.createdAt) : new Date(),
     status: app.requestStatus,
   }));
@@ -456,7 +469,7 @@ export default function ApplicationsPage() {
                 {/* Documents */}
                 <div>
                   <h4 className="font-semibold mb-3">Documents</h4>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {selectedApplication.cvUrl ? (
                       <Button variant="outline" size="sm" asChild>
                         <a href={selectedApplication.cvUrl} target="_blank" rel="noopener noreferrer">
@@ -467,13 +480,17 @@ export default function ApplicationsPage() {
                     ) : (
                       <span className="text-sm text-muted-foreground">No CV uploaded</span>
                     )}
-                    {selectedApplication.certificatesUrl && (
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={selectedApplication.certificatesUrl} target="_blank" rel="noopener noreferrer">
-                          <Download className="h-4 w-4 mr-1" />
-                          Download Certificates
-                        </a>
-                      </Button>
+                    {selectedApplication.allCertificates?.length > 0 ? (
+                      selectedApplication.allCertificates.map((certUrl, index) => (
+                        <Button key={index} variant="outline" size="sm" asChild>
+                          <a href={certUrl} target="_blank" rel="noopener noreferrer">
+                            <Download className="h-4 w-4 mr-1" />
+                            Certificate {selectedApplication.allCertificates.length > 1 ? index + 1 : ''}
+                          </a>
+                        </Button>
+                      ))
+                    ) : (
+                      <span className="text-sm text-muted-foreground">No certificates uploaded</span>
                     )}
                   </div>
                 </div>
