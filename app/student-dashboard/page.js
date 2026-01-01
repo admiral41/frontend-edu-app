@@ -8,8 +8,12 @@ import Announcements from "@/components/dashboard/Announcements";
 import LiveClasses from "@/components/dashboard/LiveClasses";
 import Assignments from "@/components/dashboard/Assignments";
 import { BookOpen, Clock, Trophy, TrendingUp } from "lucide-react";
+import { useUser } from "@/lib/hooks/useAuth";
 
 export default function StudentDashboard() {
+  const { data: user } = useUser();
+  const firstName = user?.firstname || "Student";
+
   return (
     <DashboardLayout>
       {/* Main Content */}
@@ -17,7 +21,7 @@ export default function StudentDashboard() {
         {/* Page Header */}
         <div className="mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold mb-1">
-            Welcome back, Student!
+            Welcome back, {firstName}!
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground">
             Track your progress and continue learning

@@ -8,8 +8,12 @@ import UpcomingClasses from "@/components/instructor/UpcomingClasses";
 import PendingAssignments from "@/components/instructor/PendingAssignments";
 import InstructorAnnouncements from "@/components/instructor/InstructorAnnouncements";
 import { BookOpen, Users, DollarSign, Star } from "lucide-react";
+import { useUser } from "@/lib/hooks/useAuth";
 
 export default function InstructorDashboard() {
+  const { data: user } = useUser();
+  const firstName = user?.firstname || "Instructor";
+
   return (
     <InstructorDashboardLayout>
       {/* Main Content */}
@@ -17,7 +21,7 @@ export default function InstructorDashboard() {
         {/* Page Header */}
         <div className="mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold mb-1">
-            Welcome back, Instructor!
+            Welcome back, {firstName}!
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground">
             Manage your courses and track student progress
