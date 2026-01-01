@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useRef } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,6 +16,7 @@ const AlertDialogContext = createContext();
 
 export function AlertDialogProvider({ children }) {
   const [dialog, setDialog] = useState(null);
+  const resolveRef = useRef(null);
 
   const showAlert = ({
     title,
@@ -37,25 +38,53 @@ export function AlertDialogProvider({ children }) {
     });
   };
 
+  const showConfirmation = ({
+    title,
+    description,
+    confirmText = "Confirm",
+    cancelText = "Cancel",
+    variant = "default",
+  }) => {
+    return new Promise((resolve) => {
+      resolveRef.current = resolve;
+      setDialog({
+        title,
+        description,
+        confirmText,
+        cancelText,
+        variant,
+        isPromise: true,
+      });
+    });
+  };
+
   const hideAlert = () => {
     setDialog(null);
   };
 
   const handleConfirm = () => {
-    dialog?.onConfirm?.();
+    if (dialog?.isPromise) {
+      resolveRef.current?.(true);
+    } else {
+      dialog?.onConfirm?.();
+    }
     hideAlert();
   };
 
   const handleCancel = () => {
-    dialog?.onCancel?.();
+    if (dialog?.isPromise) {
+      resolveRef.current?.(false);
+    } else {
+      dialog?.onCancel?.();
+    }
     hideAlert();
   };
 
   return (
-    <AlertDialogContext.Provider value={{ showAlert, hideAlert }}>
+    <AlertDialogContext.Provider value={{ showAlert, showConfirmation, hideAlert }}>
       {children}
 
-      <AlertDialog open={!!dialog} onOpenChange={hideAlert}>
+      <AlertDialog open={!!dialog} onOpenChange={handleCancel}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{dialog?.title}</AlertDialogTitle>
